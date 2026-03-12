@@ -1,4 +1,4 @@
-const DEFAULT_STOCK_PER_COUPON = 2;
+const DEFAULT_STOCK_PER_COUPON = 10;
 
 const STORAGE_KEYS = {
   state: "lucky_draw_state_v1",
@@ -352,10 +352,21 @@ function onResetClick() {
     return;
   }
 
+  const input = window.prompt("请输入每种券的库存数量（正整数）", String(DEFAULT_STOCK_PER_COUPON));
+  if (input === null) {
+    return;
+  }
+
+  const customStock = Number.parseInt(input, 10);
+  if (!Number.isInteger(customStock) || customStock <= 0) {
+    alert("请输入大于 0 的整数");
+    return;
+  }
+
   state = {
     round: 0,
-    stockPerCoupon: DEFAULT_STOCK_PER_COUPON,
-    inventory: Object.fromEntries(COUPONS.map((coupon) => [coupon.id, DEFAULT_STOCK_PER_COUPON])),
+    stockPerCoupon: customStock,
+    inventory: Object.fromEntries(COUPONS.map((coupon) => [coupon.id, customStock])),
     records: [],
   };
 

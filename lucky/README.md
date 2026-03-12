@@ -43,7 +43,7 @@ python -m http.server 8080
 在 `app.js` 顶部找到：
 
 ```js
-const DEFAULT_STOCK_PER_COUPON = 2;
+const DEFAULT_STOCK_PER_COUPON = 10;
 ```
 
 把 `2` 改成你想要的值（比如 `1`、`3`、`5`）。
@@ -52,6 +52,7 @@ const DEFAULT_STOCK_PER_COUPON = 2;
 
 - 改完后，旧浏览器本地数据不会自动重算。
 - 需要点击页面中的 **“重置库存与记录”**，让新库存生效。
+- 点击 **“重置库存与记录”** 时，会弹窗让你输入库存数；默认值会显示当前全局默认值（10）。
 
 ## 数据存储说明
 
