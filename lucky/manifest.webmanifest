@@ -1,0 +1,11 @@
+{
+  "name": "班级抽奖券",
+  "short_name": "抽奖券",
+  "description": "离线可用的班级抽奖小工具",
+  "lang": "zh-CN",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f7f3ff",
+  "theme_color": "#7c3aed",
+  "icons": []
+}

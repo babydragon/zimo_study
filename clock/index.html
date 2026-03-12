@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>二年级·认识时间 · 百变时钟</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Comic Sans MS', 'Chalkboard SE', '幼圆', Yuanti SC, sans-serif;
+            user-select: none;
+        }
+        body {
+            background: linear-gradient(145deg, #b8e1fc 0%, #d0f0fd 100%);
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px;
+        }
+        .game-container {
+            max-width: 1000px;
+            width: 100%;
+            background-color: #fffaec;
+            border-radius: 60px 60px 40px 40px;
+            box-shadow: 0 20px 30px rgba(0, 0, 0, 0.2), inset 0 2px 8px #fff9;
+            padding: 30px 25px;
+            border: 6px solid #f9d77e;
+        }
+        .split-panel {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .clock-area {
+            flex: 1 1 280px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #fef3d8;
+            border-radius: 50px;
+            padding: 25px 10px;
+            box-shadow: inset 0 -3px 8px #cbae7b, 0 12px 18px rgba(120, 70, 20, 0.2);
+            border: 5px solid #ffb882;
+        }
+        canvas#clockCanvas {
+            width: 100%;
+            max-width: 260px;
+            height: auto;
+            aspect-ratio: 1/1;
+            display: block;
+            background: #fef9e6;
+            border-radius: 50%;
+            box-shadow: 0 0 0 8px #ffe3b0, 0 10px 20px rgba(0,0,0,0.25);
+            border: 4px solid #fcb375;
+        }
+        .quiz-area {
+            flex: 2 1 400px;
+            background: #fff5dd;
+            border-radius: 50px;
+            padding: 25px 20px;
+            box-shadow: inset 0 -3px 8px #ecdba8, 0 12px 18px rgba(150, 90, 30, 0.15);
+            border: 5px solid #fec984;
+            display: flex;
+            flex-direction: column;
+        }
+        .score-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #ffd89c;
+            padding: 8px 18px;
+            border-radius: 40px;
+            margin-bottom: 15px;
+            font-weight: bold;
+            font-size: 1.4rem;
+            color: #4b2e1a;
+            border: 3px solid #f8b56c;
+            box-shadow: inset 0 2px 5px #ffeecc;
+        }
+        .score-title {
+            background: white;
+            padding: 4px 20px;
+            border-radius: 40px;
+            font-size: 1.3rem;
+            letter-spacing: 1px;
+        }
+        .big-title {
+            text-align: center;
+            font-size: 2rem;
+            font-weight: 800;
+            color: #a5431e;
+            background: #fff0c0;
+            padding: 10px 0;
+            border-radius: 80px;
+            margin: 10px 0 20px;
+            border: 3px solid #ffaa66;
+            text-shadow: 2px 2px 0 #ffe3a5;
+            box-shadow: 0 5px 0 #b35f2e;
+        }
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin: 15px 0 25px;
+        }
+        .option-btn {
+            background: #fee2b5;
+            border: 5px solid #fcac6b;
+            border-radius: 60px;
+            padding: 20px 8px;
+            font-size: 2rem;
+            font-weight: bold;
+            color: #442d14;
+            box-shadow: 0 8px 0 #b45f2a, 0 10px 16px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: 0.07s ease;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            letter-spacing: 2px;
+        }
+        .option-btn:active:not(:disabled) {
+            transform: translateY(6px);
+            box-shadow: 0 2px 0 #b45f2a, 0 8px 12px rgba(0,0,0,0.1);
+        }
+        .option-btn.disabled, .option-btn:disabled {
+            opacity: 0.6;
+            filter: grayscale(0.4);
+            transform: translateY(3px);
+            box-shadow: 0 4px 0 #7d4a27;
+            pointer-events: none;
+        }
+        .prefix {
+            background: #f5824e;
+            color: white;
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            margin-right: 15px;
+            box-shadow: 0 4px 0 #9e4424;
+            border: 2px solid #ffd39f;
+        }
+        .next-btn-wrapper {
+            display: flex;
+            justify-content: center;
+            margin-top: 5px;
+        }
+        #nextBtn {
+            background: #fec165;
+            border: none;
+            border-radius: 60px;
+            padding: 16px 45px;
+            font-size: 2rem;
+            font-weight: 800;
+            color: #4a2800;
+            border-bottom: 8px solid #b1581b;
+            box-shadow: 0 7px 0 #a7581f, 0 10px 20px rgba(160, 80, 0, 0.3);
+            cursor: pointer;
+            transition: 0.07s ease;
+            width: fit-content;
+            letter-spacing: 4px;
+        }
+        #nextBtn:active {
+            transform: translateY(6px);
+            border-bottom-width: 2px;
+            box-shadow: 0 2px 0 #a7581f, 0 8px 16px rgba(160,80,0,0.3);
+        }
+        #nextBtn:disabled {
+            opacity: 0.5;
+            transform: translateY(3px);
+            border-bottom-width: 4px;
+            pointer-events: none;
+        }
+        .result-area {
+            background: #f9eecd;
+            border-radius: 50px;
+            padding: 30px;
+            text-align: center;
+            border: 5px solid #fdba6a;
+            margin: 15px 0;
+        }
+        .final-score {
+            font-size: 4.5rem;
+            font-weight: 800;
+            color: #be6116;
+            text-shadow: 5px 5px 0 #ffc489;
+            line-height: 1.3;
+        }
+        .hidden {
+            display: none;
+        }
+        .sub-message {
+            font-size: 2rem;
+            color: #633f1f;
+        }
+        .error-tip {
+            background: #ffe0d0;
+            border-radius: 30px;
+            padding: 6px 15px;
+            color: #b63a00;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+        @media (max-width: 650px) {
+            .big-title { font-size: 1.8rem; }
+            .option-btn { font-size: 1.8rem; padding: 12px; }
+            .prefix { width: 38px; height: 38px; font-size: 1.5rem; margin-right: 8px; }
+        }
+    </style>
+</head>
+<body>
+<div class="game-container">
+    <div class="split-panel">
+        <div class="clock-area">
+            <canvas id="clockCanvas" width="300" height="300"></canvas>
+        </div>
+        <div class="quiz-area">
+            <div class="score-row">
+                <span class="score-title">⭐ 得分</span>
+                <span id="scoreDisplay">0 / 100</span>
+            </div>
+            <div class="big-title">⏰ 请选择正确的时间</div>
+
+            <div id="optionsContainer">
+                <div class="options-grid" id="optionsGrid"></div>
+            </div>
+
+            <div id="resultContainer" class="result-area hidden">
+                <div class="final-score" id="finalScoreSpan">100</div>
+                <div class="sub-message">🎉 你太棒啦! 🎉</div>
+            </div>
+
+            <div class="next-btn-wrapper">
+                <button id="nextBtn">下一题</button>
+            </div>
+            <div id="tipMessage" class="error-tip" style="text-align:center; margin-top: 12px;"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function() {
+        function speakText(message) {
+            if (!window.speechSynthesis) return;
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(message);
+            utterance.lang = 'zh-CN';
+            utterance.rate = 0.9;
+            utterance.pitch = 1.2;
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function formatTimeHM(hour, minute) {
+            let displayHour = hour % 12;
+            if (displayHour === 0) displayHour = 12;
+            return `${displayHour}:${minute.toString().padStart(2, '0')}`;
+        }
+
+        function generateRichTimePoints() {
+            const onNumbers = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
+            const betweenNumbers = [2, 7, 12, 17, 22, 27, 32, 37, 42, 47, 52, 57];
+
+            const finalPoints = [];
+            for (let h = 0; h < 12; h++) {
+                onNumbers.forEach(m => finalPoints.push({ hour: h, minute: m }));
+            }
+            for (let h = 0; h < 12; h++) {
+                betweenNumbers.forEach(m => {
+                    if ([2, 12, 22, 32, 42, 52].includes(m)) {
+                        finalPoints.push({ hour: h, minute: m });
+                    }
+                });
+            }
+            return finalPoints;
+        }
+
+        const TIME_POOL = generateRichTimePoints();
+
+        function generateDistractors(correctHour, correctMin) {
+            const correctStr = formatTimeHM(correctHour, correctMin);
+            const distractors = new Set();
+
+            const transforms = [
+                (h, m) => {
+                    let newM = m + 5;
+                    let newH = h;
+                    if (newM >= 60) {
+                        newM -= 60;
+                        newH = (h + 1) % 12;
+                    }
+                    return { hour: newH, minute: newM };
+                },
+                (h, m) => {
+                    let newM = m - 5;
+                    let newH = h;
+                    if (newM < 0) {
+                        newM += 60;
+                        newH = (h - 1 + 12) % 12;
+                    }
+                    return { hour: newH, minute: newM };
+                },
+                (h, m) => {
+                    let newM = m + 10;
+                    let newH = h;
+                    if (newM >= 60) {
+                        newM -= 60;
+                        newH = (h + 1) % 12;
+                    }
+                    return { hour: newH, minute: newM };
+                },
+                (h, m) => {
+                    let newM = m - 10;
+                    let newH = h;
+                    if (newM < 0) {
+                        newM += 60;
+                        newH = (h - 1 + 12) % 12;
+                    }
+                    return { hour: newH, minute: newM };
+                },
+                (h, m) => ({ hour: (h + 1) % 12, minute: m }),
+                (h, m) => ({ hour: (h - 1 + 12) % 12, minute: m }),
+                (h, m) => {
+                    let newM = m + 15;
+                    let newH = h;
+                    if (newM >= 60) {
+                        newM -= 60;
+                        newH = (h + 1) % 12;
+                    }
+                    return { hour: newH, minute: newM };
+                },
+                (h, m) => {
+                    let newM = m - 15;
+                    let newH = h;
+                    if (newM < 0) {
+                        newM += 60;
+                        newH = (h - 1 + 12) % 12;
+                    }
+                    return { hour: newH, minute: newM };
+                }
+            ];
+
+            const shuffled = [...transforms];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+
+            for (let t of shuffled) {
+                if (distractors.size >= 3) break;
+                const { hour: newH, minute: newM } = t(correctHour, correctMin);
+                const optStr = formatTimeHM(newH, newM);
+                if (optStr !== correctStr && !distractors.has(optStr)) {
+                    distractors.add(optStr);
+                }
+            }
+
+            const fallbacks = ['3:00', '6:30', '9:45', '12:00', '2:15'];
+            for (let fb of fallbacks) {
+                if (distractors.size >= 3) break;
+                if (fb !== correctStr && !distractors.has(fb)) {
+                    distractors.add(fb);
+                }
+            }
+            return Array.from(distractors);
+        }
+
+        function buildQuestion(item) {
+            const { hour, minute } = item;
+            const correct = formatTimeHM(hour, minute);
+            const dists = generateDistractors(hour, minute);
+            let options = [correct, ...dists];
+            for (let i = options.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [options[i], options[j]] = [options[j], options[i]];
+            }
+            const correctIndex = options.indexOf(correct);
+            return { options, correctIndex };
+        }
+
+        const TOTAL = 5;
+        let currentQuestions = [];
+        let currentIndex = 0;
+        let score = 0;
+        let currentAnswered = false;
+        let quizFinished = false;
+
+        const canvas = document.getElementById('clockCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const optionsGrid = document.getElementById('optionsGrid');
+        const optionsContainer = document.getElementById('optionsContainer');
+        const resultContainer = document.getElementById('resultContainer');
+        const finalScoreSpan = document.getElementById('finalScoreSpan');
+        const nextBtn = document.getElementById('nextBtn');
+        const tipMessage = document.getElementById('tipMessage');
+
+        function setTip(msg) {
+            tipMessage.innerText = msg || '';
+        }
+
+        function drawClock(hour, minute) {
+            ctx.clearRect(0, 0, 300, 300);
+            const radius = 140;
+            const centerX = 150;
+            const centerY = 150;
+
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+            ctx.fillStyle = '#fef5df';
+            ctx.fill();
+            ctx.strokeStyle = '#b57c4a';
+            ctx.lineWidth = 12;
+            ctx.stroke();
+
+            ctx.font = 'bold 24px "Comic Sans MS", "幼圆", cursive';
+            ctx.fillStyle = '#7b4d2e';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            for (let i = 1; i <= 12; i++) {
+                let angle = (i * 30 - 90) * Math.PI / 180;
+                let numX = centerX + Math.cos(angle) * 115;
+                let numY = centerY + Math.sin(angle) * 115;
+                ctx.fillText(i.toString(), numX, numY);
+            }
+
+            for (let i = 0; i < 60; i++) {
+                let angle = (i * 6 - 90) * Math.PI / 180;
+                let startX = centerX + Math.cos(angle) * (radius - 12);
+                let startY = centerY + Math.sin(angle) * (radius - 12);
+                let endX = centerX + Math.cos(angle) * (radius - 4);
+                let endY = centerY + Math.sin(angle) * (radius - 4);
+                ctx.beginPath();
+                ctx.moveTo(startX, startY);
+                ctx.lineTo(endX, endY);
+                ctx.strokeStyle = i % 5 === 0 ? '#ad6b3a' : '#c9a062';
+                ctx.lineWidth = i % 5 === 0 ? 4 : 2;
+                ctx.stroke();
+            }
+
+            let minuteAngle = (minute * 6 - 90) * Math.PI / 180;
+            let hourAngle = ((hour % 12) * 30 + minute * 0.5 - 90) * Math.PI / 180;
+
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY);
+            ctx.lineTo(centerX + Math.cos(minuteAngle) * 110, centerY + Math.sin(minuteAngle) * 110);
+            ctx.lineWidth = 5;
+            ctx.strokeStyle = '#2a5c7a';
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY);
+            ctx.lineTo(centerX + Math.cos(hourAngle) * 75, centerY + Math.sin(hourAngle) * 75);
+            ctx.lineWidth = 8;
+            ctx.strokeStyle = '#b34300';
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 12, 0, 2 * Math.PI);
+            ctx.fillStyle = '#e09f5e';
+            ctx.shadowColor = '#bb6b2b';
+            ctx.shadowBlur = 8;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        }
+
+        function updateScore() {
+            scoreDisplay.innerText = `${score} / 100`;
+        }
+
+        function setOptionsDisabled(disabled) {
+            document.querySelectorAll('.option-btn').forEach(btn => {
+                if (disabled) {
+                    btn.disabled = true;
+                    btn.classList.add('disabled');
+                } else {
+                    btn.disabled = false;
+                    btn.classList.remove('disabled');
+                }
+            });
+        }
+
+        function renderOptions() {
+            if (quizFinished || currentIndex >= TOTAL) return;
+            const qItem = currentQuestions[currentIndex];
+            const { options, correctIndex } = buildQuestion(qItem);
+            qItem.options = options;
+            qItem.correctIndex = correctIndex;
+
+            const letters = ['A', 'B', 'C', 'D'];
+            let htmlStr = '';
+            for (let i = 0; i < options.length; i++) {
+                htmlStr += `
+                    <button class="option-btn" data-opt-index="${i}">
+                        <span class="prefix">${letters[i]}</span>
+                        <span>${options[i]}</span>
+                    </button>
+                `;
+            }
+            optionsGrid.innerHTML = htmlStr;
+
+            document.querySelectorAll('.option-btn').forEach(btn => {
+                btn.addEventListener('click', optionClickHandler);
+            });
+
+            setOptionsDisabled(false);
+            currentAnswered = false;
+        }
+
+        function optionClickHandler(e) {
+            if (quizFinished) return;
+            if (currentAnswered) {
+                speakText('这题已经答对了，点下一题吧');
+                setTip('已经答对啦，点击下一题');
+                return;
+            }
+
+            const btn = e.currentTarget;
+            const selectedIndex = parseInt(btn.dataset.optIndex, 10);
+            const qItem = currentQuestions[currentIndex];
+            const isCorrect = selectedIndex === qItem.correctIndex;
+
+            if (isCorrect) {
+                speakText('恭喜你，答对了');
+                setTip('✅ 正确！ +20分');
+                if (!currentAnswered) {
+                    score += 20;
+                    updateScore();
+                    currentAnswered = true;
+                }
+                setOptionsDisabled(true);
+            } else {
+                speakText('啊哦，选错了，再试试');
+                setTip('❌ 再试试看');
+            }
+        }
+
+        function loadQuestion() {
+            if (currentIndex < TOTAL) {
+                const q = currentQuestions[currentIndex];
+                drawClock(q.hour, q.minute);
+                renderOptions();
+                setTip('');
+            } else {
+                showResultScreen();
+            }
+        }
+
+        function showResultScreen() {
+            quizFinished = true;
+            optionsContainer.classList.add('hidden');
+            resultContainer.classList.remove('hidden');
+            finalScoreSpan.innerText = score;
+            nextBtn.innerText = '再玩一次';
+        }
+
+        function resetGame() {
+            const shuffledPool = [...TIME_POOL];
+            for (let i = shuffledPool.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffledPool[i], shuffledPool[j]] = [shuffledPool[j], shuffledPool[i]];
+            }
+            currentQuestions = shuffledPool.slice(0, TOTAL).map(item => ({ hour: item.hour, minute: item.minute }));
+
+            currentIndex = 0;
+            score = 0;
+            currentAnswered = false;
+            quizFinished = false;
+            updateScore();
+
+            optionsContainer.classList.remove('hidden');
+            resultContainer.classList.add('hidden');
+            nextBtn.innerText = '下一题';
+
+            loadQuestion();
+            setTip('');
+        }
+
+        function handleNext() {
+            if (quizFinished) {
+                resetGame();
+                return;
+            }
+
+            if (currentIndex >= TOTAL) {
+                showResultScreen();
+                return;
+            }
+
+            if (!currentAnswered) {
+                speakText('请先答对题目');
+                setTip('🔔 要先答对才能进入下一题哦');
+                return;
+            }
+
+            if (currentIndex === TOTAL - 1) {
+                currentIndex++;
+                showResultScreen();
+                return;
+            }
+
+            currentIndex++;
+            loadQuestion();
+        }
+
+        function initGame() {
+            resetGame();
+            nextBtn.addEventListener('click', handleNext);
+        }
+
+        initGame();
+    })();
+</script>
+</body>
+</html>

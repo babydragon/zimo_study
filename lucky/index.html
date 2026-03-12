@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#7c3aed" />
+    <title>班级抽奖券</title>
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <h1>🎁 班级抽奖券</h1>
+      <p>点击按钮抽奖，结果会自动保存到本地</p>
+    </header>
+
+    <main class="layout">
+      <section class="panel draw-panel">
+        <label id="stageLabel" for="studentId" class="label">第一步：输入学号并确认</label>
+        <input id="studentId" class="input input-student-id" type="text" maxlength="6" inputmode="numeric" placeholder="例如：12" readonly />
+        <p id="studentStatus" class="student-status">请先输入学号，再点键盘“确定”</p>
+
+        <div id="numpad" class="numpad-container" aria-label="数字键盘">
+          <button class="numpad-btn" data-key="1" type="button">1</button>
+          <button class="numpad-btn" data-key="2" type="button">2</button>
+          <button class="numpad-btn" data-key="3" type="button">3</button>
+          <button class="numpad-btn numpad-action" data-action="clear" type="button">清空</button>
+
+          <button class="numpad-btn" data-key="4" type="button">4</button>
+          <button class="numpad-btn" data-key="5" type="button">5</button>
+          <button class="numpad-btn" data-key="6" type="button">6</button>
+          <button class="numpad-btn numpad-action" data-action="delete" type="button">←</button>
+
+          <button class="numpad-btn" data-key="7" type="button">7</button>
+          <button class="numpad-btn" data-key="8" type="button">8</button>
+          <button class="numpad-btn" data-key="9" type="button">9</button>
+          <button class="numpad-btn numpad-action" data-action="confirm" type="button">确定</button>
+
+          <button class="numpad-btn numpad-zero" data-key="0" type="button">0</button>
+        </div>
+
+        <div id="rollingDisplay" class="rolling-display" aria-live="polite">准备抽奖</div>
+
+        <div id="drawActionWrap" class="draw-action-wrap hidden">
+          <button id="drawButton" class="draw-button">开始抽奖</button>
+        </div>
+
+        <div id="postDrawActions" class="post-draw-actions hidden">
+          <button id="redrawButton" class="secondary" type="button">再抽一次</button>
+          <button id="nextStudentButton" class="danger" type="button">下一位</button>
+        </div>
+
+        <button id="editStudentIdButton" class="secondary hidden" type="button">重新输入学号</button>
+
+        <div id="resultCard" class="result-card hidden">
+          <h2>🎉 抽中结果</h2>
+          <p id="winnerName"></p>
+          <p id="winnerPrize" class="winner-prize"></p>
+          <p id="winnerTime" class="meta"></p>
+        </div>
+
+        <div class="toolbar">
+          <button id="exportButton" class="secondary">导出记录 CSV</button>
+          <button id="resetButton" class="danger">重置库存与记录</button>
+        </div>
+      </section>
+
+      <section class="panel coupon-panel">
+        <h2>券库存</h2>
+        <p class="hint">灰色表示该券已抽完</p>
+        <button id="couponToggle" class="coupon-toggle" type="button">展开全部券</button>
+        <div id="couponGrid" class="coupon-grid collapsed"></div>
+      </section>
+
+      <section class="panel full-width">
+        <h2>抽奖记录（本机）</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>轮次</th>
+                <th>时间</th>
+                <th>学号</th>
+                <th>奖品</th>
+              </tr>
+            </thead>
+            <tbody id="recordTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

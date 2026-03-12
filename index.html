@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>教学小工具导航</title>
+    <style>
+      :root {
+        --bg: #fff8e7;
+        --card: #ffffff;
+        --text: #2d3436;
+        --primary: #ff6b35;
+        --muted: #738089;
+        --border: #ffe0cc;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+        background: radial-gradient(circle at 20% 0%, #ffe5cc 0%, var(--bg) 55%);
+        color: var(--text);
+      }
+
+      .wrap {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 24px 14px;
+      }
+
+      h1 {
+        margin: 0;
+        text-align: center;
+      }
+
+      .desc {
+        margin: 10px 0 20px;
+        color: var(--muted);
+        text-align: center;
+      }
+
+      .grid {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      }
+
+      .card {
+        display: block;
+        text-decoration: none;
+        color: inherit;
+        border: 1px solid var(--border);
+        background: var(--card);
+        border-radius: 14px;
+        padding: 14px;
+        box-shadow: 0 8px 24px rgba(255, 152, 0, 0.12);
+      }
+
+      .card:hover {
+        transform: translateY(-1px);
+      }
+
+      .name {
+        margin: 0;
+        font-size: 1.1rem;
+      }
+
+      .meta {
+        margin: 6px 0 0;
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+
+      .footer {
+        margin-top: 16px;
+        color: var(--muted);
+        font-size: 0.9rem;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <h1>📚 教学小工具导航</h1>
+      <p class="desc">点击进入对应工具。后续新增工具可继续放在同级子目录。</p>
+
+      <section class="grid" id="toolGrid">
+        <a class="card" href="./lucky/">
+          <h2 class="name">🎁 班级抽奖券</h2>
+          <p class="meta">路径：/lucky/</p>
+        </a>
+
+        <a class="card" href="./clock/">
+          <h2 class="name">🕒 认识表盘（百变时钟）</h2>
+          <p class="meta">路径：/clock/</p>
+        </a>
+      </section>
+
+      <p class="footer">提示：如新增小工具目录，请同步更新本页导航。</p>
+    </main>
+  </body>
+</html>
