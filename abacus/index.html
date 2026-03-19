@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>算盘的认识 · 二下辅助练习（保留音效）</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            user-select: none;
+        }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: linear-gradient(145deg, #f9f3e7 0%, #fff3d9 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+        .practice-container {
+            width: 1300px;
+            max-width: 100%;
+            background: #fbe9d2;
+            border-radius: 60px 60px 40px 40px;
+            box-shadow: 0 20px 30px rgba(110, 70, 30, 0.2), inset 0 2px 8px #fff8e7;
+            padding: 30px 25px;
+            border: 4px solid #c99a6b;
+        }
+        .split-layout {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .left-panel {
+            flex: 1 1 550px;
+            min-width: 400px;
+            background: #e7d2b5;
+            border-radius: 48px 48px 32px 32px;
+            padding: 25px 15px 15px 15px;
+            box-shadow: inset 0 0 0 2px #b47d56, 0 8px 0 #7b583a;
+        }
+        .right-panel {
+            flex: 1 1 350px;
+            background: #fef7d2;
+            border-radius: 48px 48px 32px 32px;
+            padding: 30px 20px;
+            box-shadow: inset 0 0 0 2px #e5b887, 0 8px 0 #aa7744;
+            display: flex;
+            flex-direction: column;
+        }
+        /* 算盘区域：左侧标注 + 算盘本体 */
+        .abacus-wrapper {
+            display: flex;
+            gap: 8px;
+            align-items: stretch;
+            background: #b08e5c;
+            border-radius: 60px 60px 30px 30px;
+            padding: 20px 10px 20px 5px;
+            box-shadow: inset 0 -4px 0 #5d3e22, 0 8px 0 #4f3a24;
+            border-bottom: 3px solid #6b4d2e;
+        }
+        /* 左侧上珠/下珠标注 (只写一次) */
+        .bead-labels {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            width: 60px;
+            padding: 15px 0;
+            background: #c9a87c;
+            border-radius: 40px 0 0 40px;
+            box-shadow: inset -2px 0 0 #9b7647;
+            margin-right: 5px;
+        }
+        .label-upper, .label-lower {
+            font-size: 26px;
+            font-weight: bold;
+            color: #2f1d09;
+            writing-mode: vertical-rl;
+            text-orientation: upright;
+            text-align: center;
+            line-height: 1.2;
+            background: #f7d9a0;
+            padding: 12px 4px;
+            border-radius: 30px;
+            border: 3px solid #ad6d36;
+            box-shadow: 0 4px 0 #7b4a1f;
+            margin: 5px;
+        }
+        .label-upper {
+            background: #ffb347;
+            color: #1f1305;
+        }
+        .label-lower {
+            background: #7cc9a5;
+            color: #1f2a0e;
+            margin-top: auto; /* 尽量靠下 */
+        }
+        /* 算盘主体 */
+        .abacus-frame {
+            flex: 1;
+            min-width: 0; /* 防止溢出 */
+        }
+        .abacus-row {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            gap: 8px;
+        }
+        .column {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 85px;
+            background: #c9a87c;
+            border-radius: 30px 30px 16px 16px;
+            padding: 15px 0;
+            box-shadow: inset 0 2px 5px #977552;
+        }
+        /* 上珠区：两颗珠子并排 */
+        .upper-beam {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        .upper-bead {
+            width: 32px;
+            height: 32px;
+            background: #ececec;
+            border-radius: 50%;
+            box-shadow: 0 4px 0 #7a7a7a, 0 0 0 2px #333;
+            transition: background 0.1s ease;
+        }
+        .upper-bead.active {
+            background: #d43f3f;
+            box-shadow: 0 4px 0 #7a2a2a, 0 0 0 2px #b32b2b;
+        }
+        .lower-beads {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 6px;
+            margin-top: 8px;
+            width: 100%;
+        }
+        .lower-bead {
+            width: 26px;
+            height: 26px;
+            background: #ececec;
+            border-radius: 50%;
+            box-shadow: 0 3px 0 #7a7a7a, 0 0 0 2px #333;
+            transition: background 0.1s ease;
+        }
+        .lower-bead.active {
+            background: #d43f3f;
+            box-shadow: 0 3px 0 #7a2a2a, 0 0 0 2px #b32b2b;
+        }
+        /* 下方控制区 */
+        .controls {
+            margin-top: 20px;
+            background: #edd5b0;
+            border-radius: 40px 40px 25px 25px;
+            padding: 15px 5px;
+            box-shadow: inset 0 0 0 2px #b6814a, 0 5px 0 #7b4f2b;
+        }
+        .control-row {
+            display: flex;
+            justify-content: space-around;
+            margin: 12px 0;
+            gap: 5px;
+        }
+        .place-label {
+            width: 85px;
+            text-align: center;
+            font-size: 30px;
+            font-weight: bold;
+            background: #faeac6;
+            border-radius: 30px;
+            padding: 5px 0;
+            color: #4b2f14;
+            box-shadow: inset 0 -3px 0 #bb8f64;
+            border: 2px solid #bb7711;
+        }
+        .bead-btn {
+            width: 85px;
+            height: 70px;
+            border-radius: 40px;
+            border: none;
+            background: #ffcf9a;
+            box-shadow: 0 6px 0 #9f6d3a, 0 0 0 3px #fba76f;
+            font-size: 30px;
+            font-weight: bold;
+            color: #4d2f10;
+            cursor: pointer;
+            transition: 0.05s linear;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .bead-btn:active {
+            transform: translateY(5px);
+            box-shadow: 0 1px 0 #9f6d3a, 0 0 0 3px #fba76f;
+        }
+        .bead-btn.upper-btn {
+            background: #ffb347;
+        }
+        .bead-btn.lower-btn {
+            background: #7cc9a5;
+        }
+        .bead-btn:disabled {
+            opacity: 0.5;
+            transform: translateY(3px);
+            box-shadow: 0 2px 0 #7b5a3a;
+            cursor: not-allowed;
+        }
+        /* 右侧面板 */
+        .score-header {
+            background: #b5762e;
+            border-radius: 40px 40px 20px 20px;
+            padding: 15px 20px;
+            color: white;
+            text-shadow: 2px 2px 0 #5e3b14;
+            font-size: 28px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 30px;
+            box-shadow: inset 0 -4px 0 #633f16, 0 6px 0 #4b2f0b;
+        }
+        .question-badge {
+            background: #ffd89a;
+            border-radius: 30px;
+            padding: 12px 20px;
+            font-size: 26px;
+            text-align: center;
+            color: #3d2b0f;
+            font-weight: bold;
+            margin-bottom: 30px;
+            border: 3px solid #b2721a;
+        }
+        .options-area {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            margin: 20px 0 30px;
+        }
+        .option-btn {
+            background: #edd49b;
+            border: 4px solid #be8b3c;
+            border-radius: 60px;
+            padding: 20px 15px;
+            font-size: 42px;
+            font-weight: 700;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 8px 0 #946f32, 0 0 0 2px #fdeaac inset;
+            cursor: pointer;
+            transition: 0.05s linear;
+            color: #2e1e09;
+        }
+        .option-btn:active {
+            transform: translateY(6px);
+            box-shadow: 0 2px 0 #946f32, 0 0 0 2px #fdeaac inset;
+        }
+        .option-btn.disabled, .option-btn:disabled {
+            opacity: 0.6;
+            transform: translateY(4px);
+            box-shadow: 0 3px 0 #7b5d33;
+            pointer-events: none;
+        }
+        .option-letter {
+            background: #be6413;
+            color: white;
+            border-radius: 50%;
+            width: 65px;
+            height: 65px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            box-shadow: 0 5px 0 #6e3c0c;
+        }
+        .reset-btn {
+            background: #ffb162;
+            border: none;
+            border-radius: 50px;
+            padding: 18px;
+            font-size: 30px;
+            font-weight: bold;
+            color: #2d1a04;
+            margin-top: 15px;
+            cursor: pointer;
+            box-shadow: 0 7px 0 #884e18;
+            transition: 0.05s linear;
+        }
+        .reset-btn:active {
+            transform: translateY(5px);
+            box-shadow: 0 2px 0 #884e18;
+        }
+        .footer-note {
+            font-size: 20px;
+            color: #623d19;
+            margin-top: 15px;
+            text-align: center;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+<div class="practice-container">
+    <div class="split-layout">
+        <!-- 左侧算盘区 (教材样式：上二下五，左侧标注一次) -->
+        <div class="left-panel">
+            <div class="abacus-wrapper">
+                <!-- 左侧标注列 -->
+                <div class="bead-labels">
+                    <div class="label-upper">上珠</div>
+                    <div class="label-lower">下珠</div>
+                </div>
+                <!-- 算盘主体 -->
+                <div class="abacus-frame" id="abacusDisplay">
+                    <!-- 算盘列由js动态绘制 -->
+                </div>
+            </div>
+            <!-- 下方面板：数位、上珠按钮、下珠按钮 (每列一个按钮) -->
+            <div class="controls" id="controlPanel">
+                <div class="control-row" id="placeRow">
+                    <span class="place-label">千</span>
+                    <span class="place-label">百</span>
+                    <span class="place-label">十</span>
+                    <span class="place-label">个</span>
+                </div>
+                <div class="control-row" id="upperRow">
+                    <button class="bead-btn upper-btn" data-place="thousand" aria-label="千位上珠">🔴 上</button>
+                    <button class="bead-btn upper-btn" data-place="hundred" aria-label="百位上珠">🔴 上</button>
+                    <button class="bead-btn upper-btn" data-place="ten" aria-label="十位上珠">🔴 上</button>
+                    <button class="bead-btn upper-btn" data-place="one" aria-label="个位上珠">🔴 上</button>
+                </div>
+                <div class="control-row" id="lowerRow">
+                    <button class="bead-btn lower-btn" data-place="thousand" aria-label="千位下珠">⚪ 下</button>
+                    <button class="bead-btn lower-btn" data-place="hundred" aria-label="百位下珠">⚪ 下</button>
+                    <button class="bead-btn lower-btn" data-place="ten" aria-label="十位下珠">⚪ 下</button>
+                    <button class="bead-btn lower-btn" data-place="one" aria-label="个位下珠">⚪ 下</button>
+                </div>
+            </div>
+            <div class="footer-note">✨ 点击下方按钮拨动算珠（每档数值不能超过9）✨</div>
+        </div>
+        <!-- 右侧选择区 -->
+        <div class="right-panel" id="rightPanel">
+            <div class="score-header" id="scoreDisplay">得分 0 / 100</div>
+            <div class="question-badge" id="questionCounter">第 1 / 5 题</div>
+            <div class="options-area" id="optionsArea">
+                <button class="option-btn" id="optA"><span class="option-letter">A</span> <span id="optAText">0</span></button>
+                <button class="option-btn" id="optB"><span class="option-letter">B</span> <span id="optBText">0</span></button>
+                <button class="option-btn" id="optC"><span class="option-letter">C</span> <span id="optCText">0</span></button>
+                <button class="option-btn" id="optD"><span class="option-letter">D</span> <span id="optDText">0</span></button>
+            </div>
+            <button class="reset-btn" id="resetBtn">🔄 重新开始</button>
+        </div>
+    </div>
+</div>
+<script>
+    (function() {
+        // ==================== 音频相关（仅音效，无背景音乐）====================
+        let audioCtx = null;                // Web Audio 上下文，仅用于音效
+
+        // 初始化音频上下文（如果尚未创建）并确保它处于运行状态
+        function initAudioContext() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        // 播放音效 (正确: 上升音; 错误: 下降音)
+        function playSoundEffect(isCorrect) {
+            initAudioContext(); // 确保上下文就绪
+            if (!audioCtx) return;
+
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            osc.type = 'sine';
+            gainNode.gain.setValueAtTime(0.1, now);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+            osc.connect(gainNode).connect(audioCtx.destination);
+
+            if (isCorrect) {
+                // 上升音
+                osc.frequency.setValueAtTime(330, now);
+                osc.frequency.exponentialRampToValueAtTime(880, now + 0.3);
+            } else {
+                // 下降音
+                osc.frequency.setValueAtTime(660, now);
+                osc.frequency.exponentialRampToValueAtTime(220, now + 0.3);
+            }
+            osc.start(now);
+            osc.stop(now + 0.4);
+        }
+
+        // ==================== 原有逻辑 ====================
+        const PLACES = ['thousand', 'hundred', 'ten', 'one'];
+        const PLACE_LABELS = { thousand: '千', hundred: '百', ten: '十', one: '个' };
+
+        let abacusState = {
+            thousand: { upper: 0, lower: 0 },
+            hundred: { upper: 0, lower: 0 },
+            ten: { upper: 0, lower: 0 },
+            one: { upper: 0, lower: 0 }
+        };
+
+        let currentQuestion = 1;
+        let totalScore = 0;
+        let gameActive = true;
+        let processingAnswer = false;
+        let currentOptions = [0, 0, 0, 0];
+
+        const abacusDiv = document.getElementById('abacusDisplay');
+        const upperButtons = document.querySelectorAll('.upper-btn');
+        const lowerButtons = document.querySelectorAll('.lower-btn');
+        const optA = document.getElementById('optA');
+        const optB = document.getElementById('optB');
+        const optC = document.getElementById('optC');
+        const optD = document.getElementById('optD');
+        const optAText = document.getElementById('optAText');
+        const optBText = document.getElementById('optBText');
+        const optCText = document.getElementById('optCText');
+        const optDText = document.getElementById('optDText');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const questionCounter = document.getElementById('questionCounter');
+        const resetBtn = document.getElementById('resetBtn');
+
+        function getCurrentNumber() {
+            const tho = abacusState.thousand.upper * 5 + abacusState.thousand.lower;
+            const hun = abacusState.hundred.upper * 5 + abacusState.hundred.lower;
+            const ten = abacusState.ten.upper * 5 + abacusState.ten.lower;
+            const one = abacusState.one.upper * 5 + abacusState.one.lower;
+            return tho * 1000 + hun * 100 + ten * 10 + one;
+        }
+
+        function digitToAbacus(digit) {
+            if (digit < 0 || digit > 9) return { upper: 0, lower: 0 };
+            if (digit === 5) {
+                return Math.random() < 0.5 ? { upper: 1, lower: 0 } : { upper: 0, lower: 5 };
+            }
+            if (digit >= 6) {
+                return { upper: 1, lower: digit - 5 };
+            } else {
+                return { upper: 0, lower: digit };
+            }
+        }
+
+        function setStateFromNumber(num) {
+            num = Math.min(9999, Math.max(0, num));
+            const tho = Math.floor(num / 1000) % 10;
+            const hun = Math.floor(num / 100) % 10;
+            const ten = Math.floor(num / 10) % 10;
+            const one = num % 10;
+            abacusState.thousand = digitToAbacus(tho);
+            abacusState.hundred = digitToAbacus(hun);
+            abacusState.ten = digitToAbacus(ten);
+            abacusState.one = digitToAbacus(one);
+        }
+
+        function randomNumber() {
+            return Math.floor(Math.random() * 10000);
+        }
+
+        function renderAbacus() {
+            let html = '<div class="abacus-row">';
+            for (let place of PLACES) {
+                const state = abacusState[place];
+                const upperActive1 = state.upper >= 1;
+                const upperActive2 = state.upper >= 2;
+                const lowerCount = state.lower;
+
+                html += `<div class="column">`;
+                html += `<div class="upper-beam">`;
+                html += `<div class="upper-bead ${upperActive1 ? 'active' : ''}"></div>`;
+                html += `<div class="upper-bead ${upperActive2 ? 'active' : ''}"></div>`;
+                html += `</div>`;
+
+                html += `<div class="lower-beads">`;
+                for (let i = 0; i < 5; i++) {
+                    const active = i < lowerCount ? 'active' : '';
+                    html += `<div class="lower-bead ${active}"></div>`;
+                }
+                html += `</div></div>`;
+            }
+            html += '</div>';
+            abacusDiv.innerHTML = html;
+        }
+
+        function isValid(place, newUpper, newLower) {
+            return (newUpper * 5 + newLower) <= 9;
+        }
+
+        function generateOptions(correct) {
+            let opts = new Set();
+            opts.add(correct);
+            const strategies = [
+                (n) => { let a = Math.floor(n/1000)%10, b = Math.floor(n/100)%10, c = Math.floor(n/10)%10, d = n%10; return b*1000 + a*100 + c*10 + d; },
+                (n) => { let a = Math.floor(n/1000)%10, b = Math.floor(n/100)%10, c = Math.floor(n/10)%10, d = n%10; return a*1000 + b*100 + d*10 + c; },
+                (n) => Math.min(9999, n + 5),
+                (n) => Math.max(0, n - 5),
+                (n) => Math.min(9999, n + 12),
+                (n) => Math.max(0, n - 8),
+                (n) => { let shifted = n + 30; return shifted > 9999 ? n - 30 : shifted; },
+                (n) => { let a = Math.floor(n/1000)%10, b = Math.floor(n/100)%10, c = Math.floor(n/10)%10, d = n%10; return (c*1000 + d*100 + a*10 + b); },
+            ];
+            while (opts.size < 4) {
+                let strat = strategies[Math.floor(Math.random() * strategies.length)];
+                let candidate = strat(correct);
+                candidate = Math.min(9999, Math.max(0, candidate));
+                opts.add(candidate);
+            }
+            let optArray = Array.from(opts);
+            for (let i = optArray.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [optArray[i], optArray[j]] = [optArray[j], optArray[i]];
+            }
+            return optArray;
+        }
+
+        function updateOptionsDisplay() {
+            const correct = getCurrentNumber();
+            currentOptions = generateOptions(correct);
+            optAText.innerText = currentOptions[0];
+            optBText.innerText = currentOptions[1];
+            optCText.innerText = currentOptions[2];
+            optDText.innerText = currentOptions[3];
+        }
+
+        function refreshUI() {
+            renderAbacus();
+            updateOptionsDisplay();
+            scoreDisplay.innerText = `得分 ${totalScore} / 100`;
+            questionCounter.innerText = `第 ${currentQuestion} / 5 题`;
+        }
+
+        function setControlsEnabled(enabled) {
+            upperButtons.forEach(btn => btn.disabled = !enabled);
+            lowerButtons.forEach(btn => btn.disabled = !enabled);
+        }
+
+        function setOptionsEnabled(enabled) {
+            const opts = [optA, optB, optC, optD];
+            opts.forEach(btn => {
+                if (enabled) {
+                    btn.classList.remove('disabled');
+                    btn.disabled = false;
+                } else {
+                    btn.classList.add('disabled');
+                    btn.disabled = true;
+                }
+            });
+        }
+
+        function goToNextQuestion() {
+            if (!gameActive) return;
+            if (currentQuestion >= 5) {
+                gameActive = false;
+                setControlsEnabled(false);
+                setOptionsEnabled(false);
+                scoreDisplay.innerText = `总分 ${totalScore} / 100 🎉`;
+                questionCounter.innerText = `练习完成！`;
+                return;
+            }
+            currentQuestion++;
+            setStateFromNumber(randomNumber());
+            refreshUI();
+            setControlsEnabled(true);
+            setOptionsEnabled(true);
+            processingAnswer = false;
+        }
+
+        function handleAnswer(selectedValue) {
+            if (!gameActive || processingAnswer) return;
+            processingAnswer = true;
+            setOptionsEnabled(false);
+            setControlsEnabled(false);
+
+            const correctNum = getCurrentNumber();
+            const isCorrect = (selectedValue === correctNum);
+            if (isCorrect) {
+                totalScore += 20;
+            }
+            // 播放音效（正确/错误）
+            playSoundEffect(isCorrect);
+
+            scoreDisplay.innerText = `得分 ${totalScore} / 100`;
+
+            setTimeout(() => {
+                goToNextQuestion();
+            }, 400);
+        }
+
+        // 事件绑定（同时作为用户手势触发音频初始化）
+        upperButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                initAudioContext(); // 确保音频上下文激活（仅用于后续音效）
+                if (!gameActive) return;
+                const place = btn.dataset.place;
+                const currentUpper = abacusState[place].upper;
+                const currentLower = abacusState[place].lower;
+                let newUpper = (currentUpper + 1) % 3;
+                if (isValid(place, newUpper, currentLower)) {
+                    abacusState[place].upper = newUpper;
+                }
+                renderAbacus();
+                updateOptionsDisplay();
+            });
+        });
+
+        lowerButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                initAudioContext();
+                if (!gameActive) return;
+                const place = btn.dataset.place;
+                const currentUpper = abacusState[place].upper;
+                const currentLower = abacusState[place].lower;
+                let newLower = (currentLower + 1) % 6;
+                if (isValid(place, currentUpper, newLower)) {
+                    abacusState[place].lower = newLower;
+                }
+                renderAbacus();
+                updateOptionsDisplay();
+            });
+        });
+
+        optA.addEventListener('click', () => { initAudioContext(); handleAnswer(currentOptions[0]); });
+        optB.addEventListener('click', () => { initAudioContext(); handleAnswer(currentOptions[1]); });
+        optC.addEventListener('click', () => { initAudioContext(); handleAnswer(currentOptions[2]); });
+        optD.addEventListener('click', () => { initAudioContext(); handleAnswer(currentOptions[3]); });
+
+        resetBtn.addEventListener('click', () => {
+            initAudioContext();
+            currentQuestion = 1;
+            totalScore = 0;
+            gameActive = true;
+            processingAnswer = false;
+            setStateFromNumber(randomNumber());
+            refreshUI();
+            setControlsEnabled(true);
+            setOptionsEnabled(true);
+        });
+
+        // 初始化
+        (function init() {
+            setStateFromNumber(randomNumber());
+            refreshUI();
+            setControlsEnabled(true);
+            setOptionsEnabled(true);
+        })();
+    })();
+</script>
+</body>
+</html>
