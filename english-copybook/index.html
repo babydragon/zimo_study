@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>✏️ 英语字帖生成器</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="wrap">
+      <header class="head">
+        <h1>✏️ 英语字帖生成器</h1>
+        <p class="sub">
+          每行一句英文，把要重点记的单词用 <code>**单词**</code> 框起来，<br />
+          一键生成可打印的 A4 四线三格字帖 PDF。
+        </p>
+      </header>
+
+      <!-- 1. 输入句子 -->
+      <section class="card">
+        <label class="lbl" for="input">📖 输入英文句子</label>
+        <textarea id="input" rows="7" placeholder="每行一句，例如：&#10;Look at my **eye** and my **ear**."></textarea>
+        <p class="hint">
+          💡 用 <code>**word**</code> 标记的“核心词”会在原句里变成<b style="color:#004d99">深蓝色加粗</b>。
+        </p>
+      </section>
+
+      <!-- 2. 快捷设置 -->
+      <section class="card">
+        <div class="row">
+          <label class="lbl" for="titleInput">🏷️ 页眉标题（可选）</label>
+          <input id="titleInput" type="text" placeholder="如：三年级英语书写练习" />
+        </div>
+        <div class="row slider-row">
+          <label class="lbl" for="lineSpacing">📏 四线格线距 <span class="val" id="lineSpacingVal">12 pt</span></label>
+          <input id="lineSpacing" type="range" min="8" max="20" step="0.5" value="12" />
+        </div>
+        <div class="row">
+          <label class="lbl">📝 每句练习行数</label>
+          <div class="steppers">
+            <div class="stepper">
+              <span>描红</span>
+              <button type="button" data-step="-1" data-target="traceRows" aria-label="减少描红行">－</button>
+              <input id="traceRows" type="number" min="0" max="5" value="1" />
+              <button type="button" data-step="1" data-target="traceRows" aria-label="增加描红行">＋</button>
+            </div>
+            <div class="stepper">
+              <span>留空</span>
+              <button type="button" data-step="-1" data-target="emptyRows" aria-label="减少留空行">－</button>
+              <input id="emptyRows" type="number" min="0" max="6" value="2" />
+              <button type="button" data-step="1" data-target="emptyRows" aria-label="增加留空行">＋</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. 高级设置（可折叠） -->
+      <button id="advancedToggle" class="adv-toggle" type="button">高级设置（字号/行距/边距等） ▼</button>
+      <section id="advanced" class="card advanced">
+        <div class="grid2">
+          <div class="slider-row">
+            <label class="lbl" for="fontSize">🔤 字号 <span class="val" id="fontSizeVal">自动</span></label>
+            <input id="fontSize" type="range" min="0" max="40" step="0.5" value="0" />
+          </div>
+          <div class="slider-row">
+            <label class="lbl" for="rowGap">↕ 行间隙 <span class="val" id="rowGapVal">4 pt</span></label>
+            <input id="rowGap" type="range" min="0" max="16" step="0.5" value="4" />
+          </div>
+          <div class="slider-row">
+            <label class="lbl" for="blockGap">⏬ 句子间距 <span class="val" id="blockGapVal">18 pt</span></label>
+            <input id="blockGap" type="range" min="0" max="40" step="1" value="18" />
+          </div>
+          <div class="slider-row">
+            <label class="lbl" for="margin">🖼️ 页边距 <span class="val" id="marginVal">42.5 pt</span></label>
+            <input id="margin" type="range" min="20" max="72" step="0.5" value="42.5" />
+          </div>
+          <div class="slider-row">
+            <label class="lbl" for="yOffset">🎯 基准线微调 <span class="val" id="yOffsetVal">0.5 pt</span></label>
+            <input id="yOffset" type="range" min="-6" max="6" step="0.1" value="0.5" />
+          </div>
+          <div class="row">
+            <label class="lbl" for="theme">🎨 配色</label>
+            <select id="theme">
+              <option value="color">彩色（喷墨打印）</option>
+              <option value="bw">黑白（激光打印）</option>
+            </select>
+          </div>
+        </div>
+        <div class="toggles">
+          <label class="switch"><input id="keywordBold" type="checkbox" checked /><span>核心词加粗</span></label>
+          <label class="switch"><input id="showMarkers" type="checkbox" checked /><span>显示行首小标记</span></label>
+        </div>
+        <p class="hint">
+          🖨️ 打印小贴士：字母悬空调大“基准线微调”；字母下沉调小；超出右边距调小字号或调大边距。
+        </p>
+      </section>
+
+      <!-- 4. 操作按钮 -->
+      <div class="actions">
+        <button id="generateBtn" class="btn-primary" type="button">✨ 生成字帖 PDF</button>
+        <button id="resetBtn" class="btn-ghost" type="button">↺ 恢复默认</button>
+      </div>
+
+      <p id="status" class="status" data-kind=""></p>
+
+      <!-- 5. 预览 -->
+      <section id="previewWrap" class="card preview-wrap hidden">
+        <div class="preview-head">
+          <h2>📄 预览（如看不到，请点下面的“下载”按钮）</h2>
+          <a id="downloadBtn" class="btn-primary small hidden" download="english-copybook.pdf" href="#">⬇️ 下载 PDF</a>
+        </div>
+        <iframe id="preview" title="PDF 预览"></iframe>
+      </section>
+
+      <footer class="foot">
+        本工具在本地浏览器运行（Rust + Typst + WebAssembly），无需联网上传，不收集任何数据。
+      </footer>
+    </main>
+
+    <!-- 加载遮罩 -->
+    <div id="overlay" class="overlay hidden">
+      <div class="overlay-box">
+        <div class="spinner"></div>
+        <p id="overlayMsg">正在准备…</p>
+      </div>
+    </div>
+
+    <script type="module" src="./app.js"></script>
+    <script>
+      // 步进器：+/- 按钮调整描红/留空行数
+      document.addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-step]');
+        if (!btn) return;
+        const input = document.getElementById(btn.dataset.target);
+        if (!input) return;
+        const step = parseInt(btn.dataset.step, 10);
+        const min = parseFloat(input.min) || 0;
+        const max = parseFloat(input.max) || 99;
+        let v = (parseInt(input.value, 10) || 0) + step;
+        v = Math.max(min, Math.min(max, v));
+        input.value = v;
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+    </script>
+  </body>
+</html>

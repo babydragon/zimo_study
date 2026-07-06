@@ -1,0 +1,23 @@
+[package]
+name = "english-copybook-core"
+version = "0.1.0"
+edition = "2021"
+description = "英语字帖 Typst 源码生成器（解析 **keyword** 并生成可被 typst.ts 渲染的 .typ 文本）"
+publish = false
+
+# 关闭 wasm-opt（避免 wasm-pack 尝试联网下载 binaryen）。
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wasm-bindgen = "0.2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1

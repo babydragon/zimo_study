@@ -1,0 +1,6 @@
+english-copybook/core/target/
+english-copybook/core/pkg/
+
+# Common local junk
+.DS_Store
+Thumbs.db
