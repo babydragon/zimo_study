@@ -13,6 +13,7 @@ Colour it **red**, please.`;
 const STORE_KEY = 'english-copybook/v2';
 const LEGACY_STORE_KEY = 'english-copybook/v1';
 const BUILD_TAG = '20260706-1908';
+const TYPST_COMPILER_WASM_CDN = 'https://cdn.jsdelivr.net/npm/@myriaddreamin/typst-ts-web-compiler@0.7.0/pkg/typst_ts_web_compiler_bg.wasm';
 
 // ---------- DOM ----------
 const $ = (id) => document.getElementById(id);
@@ -168,7 +169,7 @@ function ensureTypst() {
         throw new Error('typst.ts 引擎加载失败');
       }
       $typst.setCompilerInitOptions({
-        getModule: () => new URL(`./vendor/typst-ts-web-compiler.wasm?v=${BUILD_TAG}`, location.href).href,
+        getModule: () => TYPST_COMPILER_WASM_CDN,
       });
       // 预加载字体：正文 / 中文标题 / emoji 标记
       const fontUrls = [

@@ -41,9 +41,8 @@ english-copybook/
 ├── wasm/                   # Rust 核心编译产物（已构建好，随仓库提交）
 │   ├── english_copybook_core.js
 │   └── english_copybook_core_bg.wasm
-├── vendor/                 # typst.ts 引擎（已下载好，随仓库提交）
-│   ├── typst-all-in-one-lite.bundle.js   # typst.ts 的 JS 绑定（~210KB）
-│   └── typst-ts-web-compiler.wasm         # typst 编译器（~28MB，首次加载较慢）
+├── vendor/                 # typst.ts 前端 JS 绑定
+│   └── typst-all-in-one-lite.bundle.js   # typst.ts 的 JS 绑定（~210KB）
 ├── core/                   # Rust 源码（仅修改 Rust 时才需要重新构建）
 │   ├── Cargo.toml
 │   ├── src/lib.rs
@@ -64,7 +63,7 @@ english-copybook/
    解析 **keyword**、校验参数、生成 Typst 源码字符串
         │
         ▼
-[Typst → WASM]  vendor/typst-ts-web-compiler.wasm（typst.ts v0.7）
+[Typst → WASM]  jsDelivr CDN 上的 typst 编译器 wasm（typst.ts v0.7）
    把 .typ 源码编译成 PDF 字节
         │
         ▼
@@ -76,8 +75,8 @@ english-copybook/
 - **Typst 部分**负责所有排版：四线格绘制、文字贴线、折行、**整组换页**。
   其中“整组不跨页”直接用了 Typst 原生的 `block(breakable: false)`，
   比桌面脚本版手工算坐标换页更简洁可靠。
-- 两个 wasm 都是**预先构建好随仓库提交**的，部署后是纯静态文件，
-  完全符合 Cloudflare Pages「零构建」要求。
+- Rust 核心 wasm 会**随仓库提交**；Typst 的 28MiB 编译器 wasm 改为运行时从 CDN 拉取，
+  这样可以避开 Cloudflare Pages 的 25MiB 单文件限制，同时仍保持 Pages 侧零构建。
 
 ---
 
@@ -169,7 +168,7 @@ cd english-copybook
 - `english-copybook/fonts/EnCopybook.ttf`
 - `english-copybook/fonts/ARPLKaitiMGB.ttf`
 - `english-copybook/fonts/NotoEmoji-Regular.ttf`
-- `english-copybook/vendor/*`
+- `english-copybook/vendor/typst-all-in-one-lite.bundle.js`
 - `english-copybook/wasm/*`
 - `english-copybook/core/src/*`（源码，便于后续维护）
 
@@ -180,6 +179,31 @@ cd english-copybook
 - **Build output directory**: `/`
 
 这样 Cloudflare 只负责托管静态文件，不参与 Rust/wasm 构建。
+
+### 为什么要把 typst 编译器 wasm 放到 CDN
+
+因为 Cloudflare Pages 单文件上限是 **25 MiB**，而 `typst-ts-web-compiler.wasm`
+大约 **27~28 MiB**，无法直接随 Pages 一起发布。
+
+所以当前实现改成：
+
+- 小型前端 JS 绑定：仓库内自带
+- 大型 typst 编译器 wasm：运行时从 jsDelivr 拉取
+
+这样改动最小，部署最省事。
+
+### 还有哪些可选方案
+
+如果你以后不想依赖外部 CDN，还有两个方案：
+
+1. **放到 Cloudflare R2 / 自己的对象存储**
+   - 页面继续静态托管在 Pages
+   - 大 wasm 从你自己的存储域名拉取
+   - 这是“自己可控”的长期方案
+
+2. **换部署平台**
+   - 比如允许更大静态文件的平台
+   - 但没必要，当前方案已经够简单
 
 ### 为什么不推荐让 Cloudflare Pages 直接构建
 
@@ -216,12 +240,13 @@ cd english-copybook
 但**不要忽略**：
 
 - `english-copybook/wasm/`（最终网页实际加载的 wasm/js）
-- `english-copybook/vendor/`（typst.ts 运行时文件）
+- `english-copybook/vendor/typst-all-in-one-lite.bundle.js`（typst.ts 运行时 JS）
 
 也就是说：
 
 - `core/pkg/` 是中间产物，不必提交
 - `wasm/` 是最终部署产物，需要提交
+- `vendor/typst-ts-web-compiler.wasm` 不再需要提交到 Pages
 
 ---
 
