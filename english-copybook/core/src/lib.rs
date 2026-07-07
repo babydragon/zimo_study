@@ -51,7 +51,7 @@ impl Default for Params {
             font_size: 0.0,
             line_spacing: 12.0,
             row_gap: 4.0,
-            block_gap: 18.0,
+            block_gap: 28.0,
             margin: 42.5,
             y_offset: 0.5,
             trace_rows: 1,
@@ -255,15 +255,19 @@ fn typst_preamble(p: &Params) -> String {
   place(top + left, dy: 3 * ls, line(length: w, stroke: 0.3pt + c-line))
 }}
 
-// 留空行：仅四线格。
-#let empty-row(w) = block(width: w, height: 3 * ls, spacing: 0pt)[#four-lines(w)]
-
-// 行首 emoji 标记。文字与 emoji 分字体处理：
+// 行首 emoji 标记（必须在 empty-row / text-row 之前定义，供它们调用）。
+// 文字与 emoji 分字体处理：
 // - 正文仍用手写体
 // - 标题用中文楷体
 // - 行首标记用 emoji 字体
-#let marker(mark, color) = place(top + left, dx: 6pt, dy: 2 * ls - 0.92 * iconFs + yoff,
+#let marker(mark, color) = place(top + left, dx: 6pt, dy: 2 * ls - 1.15 * iconFs + yoff,
   text(font: emojiFont, size: iconFs, fill: color)[#(if mark == "read" {{ "🔊" }} else {{ "✏" }})])
+
+// 留空行：仅四线格；开启标记时也画一个 ✏。
+#let empty-row(w, mark: none) = block(width: w, height: 3 * ls, spacing: 0pt)[
+  #four-lines(w)
+  #if showMarks and mark == "write" {{ marker("write", c-mark-write) }}
+]
 
 // 文本行：四线格 + 贴合第 3 线的文字。
 // place 的 dy 定位的是“文字框顶端”。这里把正文整体略向下放，
@@ -385,7 +389,7 @@ pub fn build_source(text: &str, params: Params) -> Result<String, String> {
             out.push_str("  #gap(rg)\n");
         }
         for _ in 0..empty_rows {
-            out.push_str("  #empty-row(100%)\n");
+            out.push_str("  #empty-row(100%, mark: \"write\")\n");
             if empty_rows > 0 {
                 out.push_str("  #gap(rg)\n");
             }

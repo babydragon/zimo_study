@@ -12,7 +12,7 @@ Colour it **red**, please.`;
 
 const STORE_KEY = 'english-copybook/v2';
 const LEGACY_STORE_KEY = 'english-copybook/v1';
-const BUILD_TAG = '20260706-1908';
+const BUILD_TAG = '20260706-1930';
 const TYPST_COMPILER_WASM_CDN = 'https://cdn.jsdelivr.net/npm/@myriaddreamin/typst-ts-web-compiler@0.7.0/pkg/typst_ts_web_compiler_bg.wasm';
 
 // ---------- DOM ----------
@@ -89,12 +89,14 @@ function loadState() {
     }
   } catch (e) {}
   if (!s) return;
+  // 迁移：旧的句间距默认值 18 → 新默认 28
+  if (Number(s.blockGap) === 18) s.blockGap = 28;
   ui.input.value = s.input ?? SAMPLE;
   ui.title.value = s.title ?? '';
   ui.fontSize.value = s.fontSize ?? 0;
   ui.lineSpacing.value = s.lineSpacing ?? 12;
   ui.rowGap.value = s.rowGap ?? 4;
-  ui.blockGap.value = s.blockGap ?? 18;
+  ui.blockGap.value = s.blockGap ?? 28;
   ui.margin.value = s.margin ?? 42.5;
   ui.yOffset.value = (s.yOffset === undefined || s.yOffset === null) ? 0.5 : s.yOffset;
   ui.traceRows.value = s.traceRows ?? 1;
@@ -271,7 +273,7 @@ function init() {
     ui.fontSize.value = 0;
     ui.lineSpacing.value = 12;
     ui.rowGap.value = 4;
-    ui.blockGap.value = 18;
+    ui.blockGap.value = 28;
     ui.margin.value = 42.5;
     ui.yOffset.value = 0.5;
     ui.traceRows.value = 1;
