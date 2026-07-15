@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+<title>看立体图形 · 三年级数学</title>
+<link rel="stylesheet" href="./css/common.css" />
+<style>
+  .subtitle { margin: 4px 2px 10px; }
+
+  .score-pill {
+    flex: 0 0 auto;
+    background: var(--card);
+    border: 2px solid var(--line-strong);
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: var(--primary-dark);
+    box-shadow: var(--shadow-soft);
+    white-space: nowrap;
+  }
+  .score-pill b { color: var(--good-dark); }
+
+  .stage { max-width: 520px; margin: 0 auto; }
+  .view-tag {
+    position: absolute;
+    top: 8px; right: 8px;
+    background: var(--accent);
+    color: #fff;
+    font-weight: 800;
+    font-size: 0.82rem;
+    padding: 6px 14px;
+    border-radius: 999px;
+    box-shadow: 0 3px 0 var(--accent-dark);
+    pointer-events: none;
+    transition: transform .2s;
+  }
+  .view-tag.pop { transform: scale(1.14); }
+
+  .outline-card { text-align: center; }
+  .oc-head {
+    font-weight: 800;
+    color: var(--accent-dark);
+    font-size: 1rem;
+    margin-bottom: 2px;
+  }
+  .outline-wrap {
+    display: flex;
+    justify-content: center;
+    margin: 4px 0 2px;
+  }
+  .outline-wrap svg {
+    width: 100%;
+    max-width: 230px;
+    height: auto;
+    display: block;
+  }
+  .quiz-card .outline-wrap svg { max-width: 250px; }
+  .shape-name {
+    font-size: 1.5rem;
+    font-weight: 900;
+    color: var(--primary-dark);
+    letter-spacing: 1px;
+    min-height: 1.6rem;
+  }
+  .shape-name small {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--ink-soft);
+    letter-spacing: 0;
+    margin-top: 2px;
+  }
+
+  .seg.answer {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 7px;
+  }
+  .seg.answer button {
+    font-size: 1rem;
+    padding: 14px 6px;
+    border-radius: var(--radius-sm);
+    transition: transform .08s, background .12s;
+  }
+  .seg.answer button:active { transform: translateY(2px); }
+  .seg.answer button.correct {
+    background: var(--good); color: #fff;
+    box-shadow: 0 3px 0 var(--good-dark);
+  }
+  .seg.answer button.wrong {
+    background: var(--bad); color: #fff;
+    box-shadow: 0 3px 0 #c92a2a;
+  }
+  .seg.answer button.reveal {
+    background: #d3f9d8; color: var(--good-dark);
+    box-shadow: inset 0 0 0 2.5px var(--good-dark);
+    animation: nudge .4s ease;
+  }
+  @keyframes nudge {
+    0%,100% { transform: scale(1); }
+    50% { transform: scale(1.08); }
+  }
+  .seg.answer button[disabled] { opacity: 0.92; cursor: default; }
+
+  .btn.big { width: 100%; font-size: 1.08rem; padding: 15px; }
+
+  .feedback { transition: transform .15s; }
+  .feedback.pop { transform: scale(1.07); }
+
+  .outline-wrap.win svg { animation: popwin .45s ease; }
+  @keyframes popwin {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.12); }
+    100% { transform: scale(1); }
+  }
+
+  #confetti {
+    position: fixed; inset: 0;
+    pointer-events: none; z-index: 9999; overflow: hidden;
+  }
+  .confetti-piece {
+    position: absolute; top: -24px;
+    width: 12px; height: 12px;
+    border-radius: 3px; will-change: transform;
+  }
+
+  .loading {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ink-soft); font-weight: 700;
+    background: linear-gradient(160deg,#eaf6ff 0%,#fdf6e3 100%);
+  }
+
+  .quiz-tip {
+    font-size: 0.82rem;
+    color: var(--ink-soft);
+    text-align: center;
+    margin: 8px 2px 2px;
+    line-height: 1.5;
+  }
+
+  @media (max-width: 360px) {
+    .seg.answer button { font-size: 0.92rem; padding: 12px 4px; }
+    .shape-name { font-size: 1.3rem; }
+    .title { font-size: 1.08rem; }
+  }
+</style>
+</head>
+<body>
+<main class="page">
+  <div class="topbar">
+    <a class="back" href="./index.html">← 返回</a>
+    <h1 class="title">🧊 看立体图形</h1>
+    <span class="score-pill" id="scorePill">⭐ 本轮 <b id="roundScore">0</b></span>
+  </div>
+  <p class="subtitle selectable">转一转立体图形，再看前、后、左、右、上、下六个方向，各能看到什么形状！点方向按钮，相机会“飞”过去哦～</p>
+
+  <div class="seg" id="modeSeg">
+    <button data-mode="explore" class="active">🔄 转着看</button>
+    <button data-mode="quiz">🎯 猜视角</button>
+  </div>
+
+  <div class="seg" id="shapeSeg" style="margin-top:10px;">
+    <button data-shape="cube" class="active">🎲 正方体</button>
+    <button data-shape="cuboid">📦 长方体</button>
+    <button data-shape="cylinder">🥫 圆柱</button>
+    <button data-shape="sphere">⚽ 球</button>
+    <button data-shape="cone">🍦 圆锥</button>
+  </div>
+
+  <div class="stage" id="stage" style="margin-top:10px;">
+    <div class="view-tag" id="viewTag">正面</div>
+    <div class="hint" id="hint">🤚 拖动转一转 · 👇 点方向看形状</div>
+    <div class="loading" id="loading">正在准备立体图形…</div>
+  </div>
+
+  <section id="explorePanel">
+    <div class="seg" id="viewSeg" style="margin-top:10px;">
+      <button data-view="front" class="active">👁 前</button>
+      <button data-view="back">🔙 后</button>
+      <button data-view="left">👈 左</button>
+      <button data-view="right">👉 右</button>
+      <button data-view="top">👆 上</button>
+      <button data-view="bottom">👇 下</button>
+    </div>
+    <div class="card outline-card" style="margin-top:10px;">
+      <div class="oc-head">🎨 <span id="outlineLabel">从前面看到的形状</span></div>
+      <div class="outline-wrap" id="exploreWrap"><svg id="outline" xmlns="http://www.w3.org/2000/svg"></svg></div>
+      <div class="shape-name" id="shapeName">正方形</div>
+    </div>
+  </section>
+
+  <section id="quizPanel" hidden style="margin-top:10px;">
+    <div class="card outline-card quiz-card">
+      <div class="oc-head">❓ <span id="quizPrompt">看这个图形，这是从哪个方向看到的？</span></div>
+      <div class="outline-wrap" id="quizWrap"><svg id="quizOutline" xmlns="http://www.w3.org/2000/svg"></svg></div>
+      <div class="shape-name" id="quizReveal" hidden></div>
+    </div>
+    <p class="quiz-tip">💡 想一想：转一转上面的立体图形，对照下面的图，是哪个方向看到的？</p>
+    <div class="seg answer" id="answerGrid" style="margin-top:8px;">
+      <button data-a="front">前</button>
+      <button data-a="back">后</button>
+      <button data-a="left">左</button>
+      <button data-a="right">右</button>
+      <button data-a="top">上</button>
+      <button data-a="bottom">下</button>
+    </div>
+    <div class="btn-row" style="margin-top:12px;">
+      <button class="btn accent big" id="nextBtn">▶ 下一题</button>
+    </div>
+  </section>
+
+  <div class="feedback" id="feedback"></div>
+  <div id="confetti"></div>
+</main>
+
+<script type="importmap">
+{ "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+/* ===================== 常量与配置 ===================== */
+const SHAPE_CN = { cube:'正方体', cuboid:'长方体', cylinder:'圆柱', sphere:'球', cone:'圆锥' };
+
+// 骰子（正方体）六面：点数 + 颜色。对立面之和=7
+const DIE_NUM_COLOR = { 1:'#ff6b6b', 2:'#ffa94d', 3:'#ffd43b', 4:'#51cf66', 5:'#4dabf7', 6:'#9775fa' };
+// BoxGeometry 材质顺序 [ +X, -X, +Y, -Y, +Z, -Z ] = [右,左,上,下,前,后]
+const DIE_FACE_ORDER = [3, 4, 1, 6, 2, 5]; // 右3 左4 上1 下6 前2 后5
+const CUBE_FACE = { // 各方向看到的面：点数 + 颜色（与 3D 完全对应）
+  front:  { n:2, c:DIE_NUM_COLOR[2] },
+  back:   { n:5, c:DIE_NUM_COLOR[5] },
+  left:   { n:4, c:DIE_NUM_COLOR[4] },
+  right:  { n:3, c:DIE_NUM_COLOR[3] },
+  top:    { n:1, c:DIE_NUM_COLOR[1] },
+  bottom: { n:6, c:DIE_NUM_COLOR[6] }
+};
+
+// 长方体六面颜色（W=2.2, H=1.3, D=1.6）
+const CUBOID_FACE = {
+  front:'#22b8cf', back:'#9775fa', left:'#f06595', right:'#94d82d', top:'#ffd43b', bottom:'#ff922b'
+};
+const CUBOID_MAT_ORDER = [ // [右,左,上,下,前,后]
+  CUBOID_FACE.right, CUBOID_FACE.left, CUBOID_FACE.top, CUBOID_FACE.bottom, CUBOID_FACE.front, CUBOID_FACE.back
+];
+const CYL  = { side:'#ffa94d', topCap:'#ffd43b', botCap:'#ff922b' }; // 圆柱 r=0.85 h=1.8
+const CONE = { side:'#f06595', base:'#fa5252' };                     // 圆锥 r=0.95 h=1.9
+const SPH  = '#4dabf7';                                              // 球 r=0.9
+
+// 猜视角模式用的“纯轮廓”单色（去掉面色提示，强化形状识别）
+const BODY = { cube:'#ff8c42', cuboid:'#22b8cf', cylinder:'#ffa94d', sphere:'#4dabf7', cone:'#f06595' };
+
+const DOTS = {
+  1: [[.5,.5]],
+  2: [[.28,.28],[.72,.72]],
+  3: [[.28,.28],[.5,.5],[.72,.72]],
+  4: [[.28,.28],[.72,.28],[.28,.72],[.72,.72]],
+  5: [[.28,.28],[.72,.28],[.5,.5],[.28,.72],[.72,.72]],
+  6: [[.28,.26],[.28,.5],[.28,.74],[.72,.26],[.72,.5],[.72,.74]]
+};
+
+// 各形状“看起来一样”的方向分组（用于猜视角判分）
+const SIL_GROUPS = {
+  cube:     { front:['front','back','left','right','top','bottom'] },
+  sphere:   { front:['front','back','left','right','top','bottom'] },
+  cuboid:   { front:['front','back'], left:['left','right'], top:['top','bottom'] },
+  cylinder: { front:['front','back','left','right'], top:['top','bottom'] },
+  cone:     { front:['front','back','left','right'], top:['top'], bottom:['bottom'] }
+};
+const SHAPE_WEIGHTS = { cube:1, cuboid:3, cylinder:3, cone:3, sphere:1 };
+
+const VIEW_FULL = { front:'前面', back:'后面', left:'左面', right:'右面', top:'上面', bottom:'下面' };
+
+// 6 个正交视角的相机位置 / 目标（透视相机摆远，近似正交）
+const VIEWS = {
+  front:  { pos:[0, 1, 9],        tgt:[0,1,0] },
+  back:   { pos:[0, 1, -9],       tgt:[0,1,0] },
+  left:   { pos:[-9, 1, 0],       tgt:[0,1,0] },
+  right:  { pos:[9, 1, 0],        tgt:[0,1,0] },
+  top:    { pos:[0, 10, 0.012],   tgt:[0,1,0] },
+  bottom: { pos:[0, -7.6, 0.012], tgt:[0,1,0] }
+};
+
+const PRAISE    = ['太棒了！','答对啦！','真聪明！','好厉害！','继续加油！','你真棒！','完美！','哇，全对！'];
+const ENCOURAGE = ['没关系，再想想！','差一点点！','别灰心，看清楚哦！','下次一定对！','仔细看看上面那个图～'];
+
+/* ===================== 状态 ===================== */
+let mode = 'explore';
+let currentShape = 'cube';
+let currentView = 'front';
+let shapeGroup = null;
+const anim = [];
+let camTween = null;
+let roundScore = 0;
+let today = loadToday();
+let quiz = { shape:null, view:null, correct:[], answered:false };
+
+/* ===================== Three.js 场景 ===================== */
+const stage = document.getElementById('stage');
+const loading = document.getElementById('loading');
+
+const scene = new THREE.Scene();
+scene.background = null;
+
+const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 100);
+camera.position.set(5, 3.8, 6.5);
+
+const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
+renderer.setClearColor(0x000000, 0);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+stage.appendChild(renderer.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 1, 0);
+controls.enableDamping = true;
+controls.dampingFactor = 0.12;
+controls.enablePan = false;
+controls.minDistance = 4;
+controls.maxDistance = 16;
+controls.minPolarAngle = 0;
+controls.maxPolarAngle = Math.PI;
+controls.rotateSpeed = 0.9;
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+scene.add(new THREE.HemisphereLight(0xcfeaff, 0xfff0c0, 0.6));
+const dir = new THREE.DirectionalLight(0xffffff, 1.0);
+dir.position.set(4.5, 8, 5.5);
+dir.castShadow = true;
+dir.shadow.mapSize.set(1024, 1024);
+dir.shadow.camera.near = 0.5;
+dir.shadow.camera.far = 25;
+dir.shadow.camera.left = -4;
+dir.shadow.camera.right = 4;
+dir.shadow.camera.top = 5;
+dir.shadow.camera.bottom = -2;
+dir.shadow.bias = -0.0004;
+scene.add(dir);
+
+// 地面：ShadowMaterial 只显示阴影，不挡任何视角（含“下视图”）
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(10, 10),
+  new THREE.ShadowMaterial({ opacity: 0.3 })
+);
+ground.rotation.x = -Math.PI / 2;
+ground.position.y = 0;
+ground.receiveShadow = true;
+scene.add(ground);
+
+/* ===================== 工具：颜色 / 骰子贴图 ===================== */
+function darken(hex, amt = 0.68) {
+  const c = hex.replace('#', '');
+  const r = Math.round(parseInt(c.slice(0,2),16) * amt);
+  const g = Math.round(parseInt(c.slice(2,4),16) * amt);
+  const b = Math.round(parseInt(c.slice(4,6),16) * amt);
+  return 'rgb(' + r + ',' + g + ',' + b + ')';
+}
+function lighten(hex, amt = 0.45) {
+  const c = hex.replace('#', '');
+  const mix = v => Math.round(v + (255 - v) * amt);
+  return 'rgb(' + mix(parseInt(c.slice(0,2),16)) + ',' + mix(parseInt(c.slice(2,4),16)) + ',' + mix(parseInt(c.slice(4,6),16)) + ')';
+}
+function ctxRoundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+function dieTexture(n, bg) {
+  const c = document.createElement('canvas');
+  c.width = c.height = 256;
+  const x = c.getContext('2d');
+  x.fillStyle = bg; ctxRoundRect(x, 6, 6, 244, 244, 44); x.fill();
+  x.fillStyle = 'rgba(255,255,255,0.14)'; ctxRoundRect(x, 14, 14, 228, 78, 30); x.fill();
+  x.fillStyle = '#fff'; x.strokeStyle = 'rgba(0,0,0,0.18)'; x.lineWidth = 2;
+  for (const [dx, dy] of DOTS[n]) {
+    const px = dx * 256, py = dy * 256;
+    x.beginPath(); x.arc(px, py, 19, 0, Math.PI * 2); x.fill(); x.stroke();
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  return t;
+}
+
+/* ===================== 构建立体图形 ===================== */
+function disposeGroup(g) {
+  g.traverse(o => {
+    if (o.geometry) o.geometry.dispose();
+    if (o.material) {
+      const ms = Array.isArray(o.material) ? o.material : [o.material];
+      ms.forEach(m => { if (m.map) m.map.dispose(); m.dispose(); });
+    }
+  });
+}
+function addEdges(mesh, geo) {
+  const e = new THREE.LineSegments(
+    new THREE.EdgesGeometry(geo),
+    new THREE.LineBasicMaterial({ color: 0x2d3436, transparent: true, opacity: 0.5 })
+  );
+  mesh.add(e);
+}
+function animateIn(g) {
+  g.scale.setScalar(0.01);
+  anim.push({ target: g, start: performance.now() });
+}
+function buildShape(shape) {
+  const g = new THREE.Group();
+  let mesh, cy;
+  if (shape === 'cube') {
+    const s = 1.6;
+    const geo = new THREE.BoxGeometry(s, s, s);
+    const mats = DIE_FACE_ORDER.map(n =>
+      new THREE.MeshStandardMaterial({ map: dieTexture(n, DIE_NUM_COLOR[n]), roughness: 0.55 }));
+    mesh = new THREE.Mesh(geo, mats); cy = s / 2;
+    addEdges(mesh, geo);
+  } else if (shape === 'cuboid') {
+    const W = 2.2, H = 1.3, D = 1.6;
+    const geo = new THREE.BoxGeometry(W, H, D);
+    const mats = CUBOID_MAT_ORDER.map(c => new THREE.MeshStandardMaterial({ color: c, roughness: 0.55 }));
+    mesh = new THREE.Mesh(geo, mats); cy = H / 2;
+    addEdges(mesh, geo);
+  } else if (shape === 'cylinder') {
+    const r = 0.85, h = 1.8;
+    const geo = new THREE.CylinderGeometry(r, r, h, 56);
+    const mats = [CYL.side, CYL.topCap, CYL.botCap].map(c =>
+      new THREE.MeshStandardMaterial({ color: c, roughness: 0.5 }));
+    mesh = new THREE.Mesh(geo, mats); cy = h / 2;
+  } else if (shape === 'sphere') {
+    const r = 0.9;
+    const geo = new THREE.SphereGeometry(r, 48, 32);
+    mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: SPH, roughness: 0.38 }));
+    cy = r;
+  } else { // cone
+    const r = 0.95, h = 1.9;
+    const geo = new THREE.ConeGeometry(r, h, 56);
+    const mats = [CONE.side, CONE.base].map(c =>
+      new THREE.MeshStandardMaterial({ color: c, roughness: 0.5 }));
+    mesh = new THREE.Mesh(geo, mats); cy = h / 2;
+  }
+  mesh.position.y = cy;
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  g.add(mesh);
+  animateIn(g);
+  return g;
+}
+function setShape(shape, { redraw = true } = {}) {
+  if (shapeGroup) { scene.remove(shapeGroup); disposeGroup(shapeGroup); shapeGroup = null; }
+  currentShape = shape;
+  shapeGroup = buildShape(shape);
+  scene.add(shapeGroup);
+  document.querySelectorAll('#shapeSeg button').forEach(b =>
+    b.classList.toggle('active', b.dataset.shape === shape));
+  if (redraw && mode === 'explore') {
+    drawOutline(document.getElementById('outline'), shape, currentView, true);
+    updateExploreLabels();
+  }
+}
+
+/* ===================== 2D 轮廓绘制（SVG，几何正确） ===================== */
+const NS = 'http://www.w3.org/2000/svg';
+function svgEl(name, attrs = {}) {
+  const e = document.createElementNS(NS, name);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  return e;
+}
+function clearSvg(svg) {
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+  svg.setAttribute('viewBox', '0 0 200 200');
+}
+
+function drawOutline(svg, shape, view, colored) {
+  clearSvg(svg);
+  const cx = 100, cy = 100;
+  const rect = (x, y, w, h, fill, opts) => {
+    opts = opts || {};
+    svg.appendChild(svgEl('rect', {
+      x: x, y: y, width: w, height: h, rx: opts.rx || 0,
+      fill: fill, stroke: opts.stroke || 'none', 'stroke-width': opts.sw || 0
+    }));
+  };
+  const circle = (x, y, r, fill, opts) => {
+    opts = opts || {};
+    svg.appendChild(svgEl('circle', {
+      cx: x, cy: y, r: r, fill: fill,
+      stroke: opts.stroke || 'none', 'stroke-width': opts.sw || 0
+    }));
+  };
+  const ellipse = (x, y, rx, ry, fill, opts) => {
+    opts = opts || {};
+    svg.appendChild(svgEl('ellipse', {
+      cx: x, cy: y, rx: rx, ry: ry, fill: fill,
+      stroke: opts.stroke || 'none', 'stroke-width': opts.sw || 0
+    }));
+  };
+  const poly = (pts, fill, opts) => {
+    opts = opts || {};
+    svg.appendChild(svgEl('polygon', {
+      points: pts, fill: fill,
+      stroke: opts.stroke || 'none', 'stroke-width': opts.sw || 0
+    }));
+  };
+
+  if (shape === 'cube') {
+    // 正方体：任一视角都是正方形；探索模式显示对应面色 + 点数
+    const S = 150, x0 = cx - S / 2, y0 = cy - S / 2;
+    const fc = colored ? CUBE_FACE[view].c : BODY.cube;
+    rect(x0, y0, S, S, fc, { rx: 0, stroke: darken(fc), sw: 3 });
+    if (colored) {
+      const dr = S * 0.085;
+      for (const [dx, dy] of DOTS[CUBE_FACE[view].n]) {
+        circle(x0 + dx * S, y0 + dy * S, dr, '#fff', { stroke: 'rgba(0,0,0,0.2)', sw: 1.5 });
+      }
+    }
+  }
+  else if (shape === 'cuboid') {
+    // 长方体：前/后=W×H，左/右=D×H，上/下=W×D（不同长宽比）
+    const dims = {
+      front:[150,88], back:[150,88],
+      left:[109,88],  right:[109,88],
+      top:[150,109],  bottom:[150,109]
+    };
+    const [w, h] = dims[view];
+    const fc = colored ? CUBOID_FACE[view] : BODY.cuboid;
+    rect(cx - w / 2, cy - h / 2, w, h, fc, { rx: 0, stroke: darken(fc), sw: 3 });
+  }
+  else if (shape === 'cylinder') {
+    if (view === 'top' || view === 'bottom') {
+      // 上/下看：圆
+      const fc = colored ? (view === 'top' ? CYL.topCap : CYL.botCap) : BODY.cylinder;
+      circle(cx, cy, 75, fc, { stroke: darken(fc), sw: 3 });
+    } else {
+      // 侧面：长方形（带上下圆边）—— 主体矩形 + 顶/底椭圆
+      const w = 150, h = 150;   // 2r=1.7→150, h=1.8→150
+      const bodyColor = colored ? CYL.side : BODY.cylinder;
+      const x0 = cx - w / 2, y0 = cy - h / 2;
+      rect(x0, y0, w, h, bodyColor, { rx: 0, stroke: darken(bodyColor), sw: 3 });
+      const topC = colored ? CYL.topCap : lighten(bodyColor, 0.3);
+      const botC = colored ? CYL.botCap : darken(bodyColor, 0.85);
+      ellipse(cx, y0, w / 2, 10, topC, { stroke: darken(bodyColor), sw: 2 });      // 可见的上圆面
+      ellipse(cx, y0 + h, w / 2, 10, botC, { stroke: darken(bodyColor), sw: 2 }); // 下底圆边
+    }
+  }
+  else if (shape === 'sphere') {
+    // 球：任一视角都是圆（加高光显得圆润）
+    circle(cx, cy, 75, SPH, { stroke: darken(SPH), sw: 3 });
+    circle(cx - 22, cy - 24, 30, lighten(SPH, 0.5), {});
+    ellipse(cx - 28, cy - 34, 14, 8, 'rgba(255,255,255,0.85)', {});
+  }
+  else if (shape === 'cone') {
+    if (view === 'top') {
+      // 上视：圆 + 圆心一个点（尖顶投影）
+      const fc = colored ? CONE.side : BODY.cone;
+      circle(cx, cy, 75, fc, { stroke: darken(fc), sw: 3 });
+      circle(cx, cy, 8, '#fff', { stroke: '#333', sw: 2 });
+    } else if (view === 'bottom') {
+      // 下视：圆（底面）
+      const fc = colored ? CONE.base : BODY.cone;
+      circle(cx, cy, 75, fc, { stroke: darken(fc), sw: 3 });
+    } else {
+      // 侧面：三角形
+      const fc = colored ? CONE.side : BODY.cone;
+      const pts = (cx) + ',' + (cy - 78) + ' ' + (cx - 78) + ',' + (cy + 78) + ' ' + (cx + 78) + ',' + (cy + 78);
+      poly(pts, fc, { stroke: darken(fc), sw: 3 });
+    }
+  }
+}
+
+function shapeNameOf(shape, view) {
+  if (shape === 'cube') return '正方形';
+  if (shape === 'cuboid') return '长方形';
+  if (shape === 'cylinder') return (view === 'top' || view === 'bottom') ? '圆' : '长方形';
+  if (shape === 'sphere') return '圆';
+  if (shape === 'cone') {
+    if (view === 'top') return '圆';
+    if (view === 'bottom') return '圆';
+    return '三角形';
+  }
+  return '';
+}
+
+/* ===================== 相机平滑过渡 ===================== */
+function alignView(view) {
+  const V = VIEWS[view];
+  controls.enabled = false;
+  const sp = camera.position.clone();
+  const st = controls.target.clone();
+  const tp = new THREE.Vector3(V.pos[0], V.pos[1], V.pos[2]);
+  const tt = new THREE.Vector3(V.tgt[0], V.tgt[1], V.tgt[2]);
+  const t0 = performance.now();
+  const dur = 620;
+  camTween = now => {
+    const k = Math.min(1, (now - t0) / dur);
+    const e = 1 - Math.pow(1 - k, 3);
+    camera.position.lerpVectors(sp, tp, e);
+    controls.target.lerpVectors(st, tt, e);
+    if (k >= 1) { controls.enabled = true; camTween = null; }
+  };
+}
+
+/* ===================== 探索模式 ===================== */
+const outlineSvg = document.getElementById('outline');
+function updateExploreLabels() {
+  document.getElementById('outlineLabel').textContent = '从' + VIEW_FULL[currentView] + '看到的形状';
+  const nm = shapeNameOf(currentShape, currentView);
+  const sub = currentShape === 'cone' && currentView === 'top' ? '（中间一个点 = 尖顶）' : '';
+  document.getElementById('shapeName').innerHTML = nm + (sub ? '<small>' + sub + '</small>' : '');
+  const tag = document.getElementById('viewTag');
+  tag.textContent = VIEW_FULL[currentView];
+  tag.classList.add('pop');
+  setTimeout(() => tag.classList.remove('pop'), 200);
+}
+function setView(v) {
+  currentView = v;
+  document.querySelectorAll('#viewSeg button').forEach(b =>
+    b.classList.toggle('active', b.dataset.view === v));
+  drawOutline(outlineSvg, currentShape, v, true);
+  updateExploreLabels();
+  alignView(v);
+  playClick();
+}
+
+/* ===================== 猜视角模式 ===================== */
+function weightedShape() {
+  const list = [];
+  for (const s in SHAPE_WEIGHTS) for (let i = 0; i < SHAPE_WEIGHTS[s]; i++) list.push(s);
+  return list[Math.floor(Math.random() * list.length)];
+}
+function sameSilhouette(shape, view) {
+  const g = SIL_GROUPS[shape];
+  for (const k in g) if (g[k].indexOf(view) >= 0) return g[k];
+  return [view];
+}
+const quizSvg = document.getElementById('quizOutline');
+function newQuestion() {
+  quiz.shape = weightedShape();
+  const keys = Object.keys(SIL_GROUPS[quiz.shape]);
+  const rep = keys[Math.floor(Math.random() * keys.length)];
+  const group = SIL_GROUPS[quiz.shape][rep];
+  quiz.view = group[Math.floor(Math.random() * group.length)];
+  quiz.correct = sameSilhouette(quiz.shape, quiz.view);
+  quiz.answered = false;
+
+  drawOutline(quizSvg, quiz.shape, quiz.view, false);
+  document.getElementById('quizPrompt').textContent =
+    '看这个' + SHAPE_CN[quiz.shape] + '，下面这张图是从哪个方向看到的？';
+  const reveal = document.getElementById('quizReveal');
+  reveal.hidden = true;
+  reveal.innerHTML = '';
+
+  // 重置答题按钮
+  document.querySelectorAll('#answerGrid button').forEach(b => {
+    b.disabled = false;
+    b.classList.remove('correct', 'wrong', 'reveal');
+  });
+
+  // 同步 3D 为本题形状（自由旋转，不对齐、不剧透）
+  setShape(quiz.shape, { redraw: false });
+  // 把相机拉到一个不直接给出答案的 3/4 角度
+  camera.position.set(5, 3.6, 6.2);
+  controls.target.set(0, 1, 0);
+  controls.enabled = true;
+
+  flash('🤔 想一想，这是从哪个方向看到的？', 'info');
+}
+function handleAnswer(choice, btn) {
+  if (quiz.answered) return;
+  quiz.answered = true;
+  const ok = quiz.correct.indexOf(choice) >= 0;
+  const buttons = document.querySelectorAll('#answerGrid button');
+  buttons.forEach(b => b.disabled = true);
+
+  const reveal = document.getElementById('quizReveal');
+  reveal.hidden = false;
+
+  if (ok) {
+    btn.classList.add('correct');
+    roundScore++;
+    today.correct++;
+    today.total++;
+    saveToday(today);
+    updateScore();
+    const nm = shapeNameOf(quiz.shape, quiz.view);
+    reveal.innerHTML = '✓ ' + nm + '<small>从' + VIEW_FULL[quiz.view] + '看到的</small>';
+    // 对称形状（任意方向都对）特别提示
+    let msg;
+    if (quiz.correct.length === 6) {
+      if (quiz.shape === 'sphere') msg = '✓ 答对啦！球从哪个方向看都是圆～';
+      else msg = '✓ 答对啦！正方体每个面都是正方形，从哪边看都对～';
+    } else {
+      msg = '✓ ' + PRAISE[Math.floor(Math.random() * PRAISE.length)];
+    }
+    flash(msg, 'ok');
+    playSuccess();
+    document.getElementById('quizWrap').classList.add('win');
+    setTimeout(() => document.getElementById('quizWrap').classList.remove('win'), 500);
+    spawnConfetti();
+    alignView(quiz.view); // 飞到正确方向确认
+    celebrateShape();
+  } else {
+    btn.classList.add('wrong');
+    // 高亮所有正确答案
+    buttons.forEach(b => {
+      if (quiz.correct.indexOf(b.dataset.a) >= 0) b.classList.add('reveal');
+    });
+    today.total++;
+    saveToday(today);
+    const nm = shapeNameOf(quiz.shape, quiz.view);
+    reveal.innerHTML = '✗ 其实是 ' + nm + '<small>从' + VIEW_FULL[quiz.view] + '看到的</small>';
+    flash('✗ ' + ENCOURAGE[Math.floor(Math.random() * ENCOURAGE.length)] + ' 正确答案已点亮～', 'no');
+    playWrong();
+    alignView(quiz.view);
+  }
+}
+
+/* ===================== 模式切换 ===================== */
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll('#modeSeg button').forEach(b =>
+    b.classList.toggle('active', b.dataset.mode === m));
+  const explore = document.getElementById('explorePanel');
+  const quizPanel = document.getElementById('quizPanel');
+  const shapeSeg = document.getElementById('shapeSeg');
+  const viewTag = document.getElementById('viewTag');
+  if (m === 'quiz') {
+    shapeSeg.hidden = true;
+    explore.hidden = true;
+    quizPanel.hidden = false;
+    viewTag.hidden = true;
+    document.getElementById('hint').textContent = '🤚 拖动转一转，找找是哪个方向';
+    roundScore = 0;
+    updateScore();
+    newQuestion();
+  } else {
+    shapeSeg.hidden = false;
+    explore.hidden = false;
+    quizPanel.hidden = true;
+    viewTag.hidden = false;
+    document.getElementById('hint').textContent = '🤚 拖动转一转 · 👇 点方向看形状';
+    setShape(currentShape, { redraw: true });
+    setView(currentView);
+  }
+}
+
+/* ===================== 反馈 / 音效 / 庆祝 ===================== */
+let flashTimer = null;
+function flash(msg, type) {
+  type = type || 'info';
+  const el = document.getElementById('feedback');
+  el.textContent = msg;
+  el.className = 'feedback ' + type + ' pop';
+  clearTimeout(flashTimer);
+  flashTimer = setTimeout(() => el.classList.remove('pop'), 200);
+}
+
+let audioCtx = null;
+function ensureAudio() {
+  if (!audioCtx) { try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { audioCtx = null; } }
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+}
+function beep(freq, dur, type, vol) {
+  if (!audioCtx) return;
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.type = type || 'sine'; o.frequency.value = freq;
+  o.connect(g); g.connect(audioCtx.destination);
+  const t = audioCtx.currentTime;
+  g.gain.setValueAtTime(vol || 0.07, t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.start(t); o.stop(t + dur + 0.02);
+}
+function playClick() { ensureAudio(); beep(320, 0.08, 'sine', 0.05); }
+function playSuccess() {
+  ensureAudio();
+  beep(523, 0.12); setTimeout(() => beep(659, 0.12), 110); setTimeout(() => beep(784, 0.2), 220);
+}
+function playWrong() { ensureAudio(); beep(220, 0.18, 'sawtooth', 0.05); setTimeout(() => beep(170, 0.22, 'sawtooth', 0.05), 130); }
+
+function celebrateShape() {
+  if (shapeGroup) anim.push({ target: shapeGroup, start: performance.now(), celebrate: true });
+}
+
+const CONFETTI_COLORS = ['#ff6b35', '#ffd43b', '#51cf66', '#4dabf7', '#9775fa', '#ff8787', '#f06595'];
+function spawnConfetti() {
+  const box = document.getElementById('confetti');
+  box.innerHTML = '';
+  for (let i = 0; i < 30; i++) {
+    const p = document.createElement('div');
+    p.className = 'confetti-piece';
+    p.style.background = CONFETTI_COLORS[i % CONFETTI_COLORS.length];
+    p.style.left = (Math.random() * 100) + 'vw';
+    const fall = 1300 + Math.random() * 700;
+    const drift = (Math.random() - 0.5) * 160;
+    const rot = (Math.random() * 720 - 360);
+    box.appendChild(p);
+    p.animate(
+      [
+        { transform: 'translateY(-24px) rotate(0deg)', opacity: 1 },
+        { transform: 'translate(' + drift + 'px, 100vh) rotate(' + rot + 'deg)', opacity: 0.9 }
+      ],
+      { duration: fall, easing: 'cubic-bezier(.2,.6,.4,1)', fill: 'forwards' }
+    );
+  }
+  setTimeout(() => { box.innerHTML = ''; }, 2400);
+}
+
+/* ===================== 成绩 ===================== */
+function updateScore() {
+  document.getElementById('scorePill').innerHTML =
+    '⭐ 本轮 <b>' + roundScore + '</b> · 今日 <b>' + today.correct + '</b>/' + today.total;
+}
+function todayStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function loadToday() {
+  try {
+    const d = JSON.parse(localStorage.getItem('views_quiz_today') || '{}');
+    if (d.date === todayStr()) return { date: d.date, correct: d.correct || 0, total: d.total || 0 };
+  } catch (e) {}
+  return { date: todayStr(), correct: 0, total: 0 };
+}
+function saveToday(d) {
+  d.date = todayStr();
+  try { localStorage.setItem('views_quiz_today', JSON.stringify(d)); } catch (e) {}
+}
+
+/* ===================== 事件绑定 ===================== */
+document.querySelectorAll('#modeSeg button').forEach(b =>
+  b.addEventListener('click', () => { ensureAudio(); setMode(b.dataset.mode); }));
+document.querySelectorAll('#shapeSeg button').forEach(b =>
+  b.addEventListener('click', () => { ensureAudio(); setShape(b.dataset.shape); }));
+document.querySelectorAll('#viewSeg button').forEach(b =>
+  b.addEventListener('click', () => { ensureAudio(); setView(b.dataset.view); }));
+document.querySelectorAll('#answerGrid button').forEach(b =>
+  b.addEventListener('click', () => { ensureAudio(); handleAnswer(b.dataset.a, b); }));
+document.getElementById('nextBtn').addEventListener('click', () => { ensureAudio(); newQuestion(); });
+
+// 首次触摸后才放声音（移动端自动播放限制）
+renderer.domElement.addEventListener('pointerdown', ensureAudio, { once: true });
+
+/* ===================== 渲染循环 + 自适应 ===================== */
+function easeOutBack(t) {
+  const c1 = 1.70158, c3 = c1 + 1;
+  return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+}
+function animate(now) {
+  for (let i = anim.length - 1; i >= 0; i--) {
+    const a = anim[i];
+    const el = now - a.start;
+    if (el < 0) continue;
+    if (a.celebrate) {
+      const t = Math.min(1, el / 460);
+      a.target.scale.setScalar(1 + Math.sin(t * Math.PI) * 0.16);
+      if (t >= 1) { a.target.scale.setScalar(1); anim.splice(i, 1); }
+    } else {
+      const t = Math.min(1, el / 280);
+      const s = t >= 1 ? 1 : easeOutBack(t);
+      a.target.scale.setScalar(Math.max(0.01, s));
+      if (t >= 1) { a.target.scale.setScalar(1); anim.splice(i, 1); }
+    }
+  }
+  if (camTween) camTween(now);
+  controls.update();
+  renderer.render(scene, camera);
+  requestAnimationFrame(animate);
+}
+function resize() {
+  const w = stage.clientWidth, h = stage.clientHeight;
+  if (w === 0 || h === 0) return;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+const ro = new ResizeObserver(resize);
+ro.observe(stage);
+window.addEventListener('resize', resize);
+
+/* ===================== 启动 ===================== */
+resize();
+setShape('cube', { redraw: false });
+drawOutline(outlineSvg, 'cube', 'front', true);
+updateExploreLabels();
+updateScore();
+loading.style.display = 'none';
+requestAnimationFrame(animate);
+
+// 防止双击缩放
+document.addEventListener('gesturestart', e => e.preventDefault());
+</script>
+</body>
+</html>

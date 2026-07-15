@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>✂️ 打印展开图 · 观察物体</title>
+<link rel="stylesheet" href="./css/common.css" />
+<style>
+  .ctrl { display:flex; flex-direction:column; gap:10px; }
+  .param { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .param label { font-size:.9rem; min-width:64px; color:var(--ink-soft); font-weight:700; }
+  .param input[type=range] { flex:1; min-width:120px; height:34px; }
+  .param .val { font-weight:700; min-width:48px; text-align:right; }
+  .preview { background:#fff; border:2px solid var(--line); border-radius:var(--radius); padding:8px; box-shadow:var(--shadow-soft); overflow:auto; }
+  .preview svg { display:block; width:100%; height:auto; max-height:60vh; margin:0 auto; }
+  .legend { display:flex; gap:14px; flex-wrap:wrap; justify-content:center; margin:8px 0 0; font-size:.82rem; color:var(--ink-soft); }
+  .legend span { display:inline-flex; align-items:center; gap:5px; }
+  .swatch { width:24px; height:0; border-top:2.5px solid #222; display:inline-block; }
+  .swatch.fold { border-top:2px dashed #6c5ce7; }
+  @media print {
+    body { background:#fff; }
+    .no-print { display:none !important; }
+    .page { max-width:none; padding:0; }
+    .preview { border:none; box-shadow:none; padding:0; }
+    .preview svg { max-height:none; }
+  }
+</style>
+</head>
+<body>
+<main class="page">
+  <div class="topbar">
+    <a class="back" href="./index.html">← 返回</a>
+    <h1 class="title">✂️ 打印展开图</h1>
+  </div>
+  <p class="subtitle selectable">选一个图形，下载或打印展开图：沿<b>实线</b>剪开，沿<b>紫色虚线</b>折叠，把小翼涂胶水粘起来，就能立成立体图形！</p>
+
+  <div class="card ctrl no-print">
+    <div class="seg" id="shapeSeg">
+      <button data-shape="cube" class="active">正方体</button>
+      <button data-shape="cuboid">长方体</button>
+      <button data-shape="cylinder">圆柱</button>
+      <button data-shape="cone">圆锥</button>
+      <button data-shape="frustum">圆台</button>
+      <button data-shape="prism">三棱柱</button>
+      <button data-shape="pyramid">四棱锥</button>
+    </div>
+    <div id="params"></div>
+    <div class="legend">
+      <span><i class="swatch"></i> 实线＝剪开</span>
+      <span><i class="swatch fold"></i> 紫虚线＝折叠</span>
+      <span>🩹 小翼＝涂胶水粘合</span>
+    </div>
+  </div>
+
+  <div class="preview" id="preview"></div>
+
+  <div class="btn-row no-print" style="justify-content:center; margin-top:12px;">
+    <button class="btn" id="dlSvg">⬇️ 下载 SVG</button>
+    <button class="btn ghost" id="printBtn">🖨️ 打印</button>
+    <button class="btn ghost" id="dlPng">🖼️ 下载 PNG</button>
+  </div>
+</main>
+
+<script>
+const PX = 40;                 // 1 cm = 40 px（内部坐标）
+const CUT = "#222", FOLD = "#6c5ce7";
+const CUT_W = 2.2, FOLD_W = 1.4, DASH = "7 4";
+const PALETTE = ["#ffd6a5","#caffbf","#9bf6ff","#ffc6ff","#fdffb6","#bdb2ff","#a0c4ff","#ffc9de"];
+const TABH = 0.6;              // 粘贴翼高度(cm)
+const R = x => Math.round(x*100)/100;   // 坐标取整(用于边匹配)
+
+const DEFS = {
+  cube:     { a:6 },
+  cuboid:   { a:8, b:5, h:4 },
+  cylinder: { r:3, h:8 },
+  cone:     { r:3, l:7 },
+  frustum:  { r1:2, r2:4, l:5 },
+  prism:    { a:5, h:8 },
+  pyramid:  { a:6, s:6 }
+};
+const P = {}; Object.assign(P, DEFS.cube);
+let SHAPE = "cube";
+
+/* ---------- 网构建器（边自动推导：共享边=折叠，边界边=裁剪/小翼） ---------- */
+function Net(){
+  this.faces=[];      // {pts,fill,label,labelPt} 参与边推导 + 填充
+  this.fills=[];      // {pts,fill} 仅填充(小翼等)
+  this.labels=[];     // {pt,text} 纯文字(不参与边推导)
+  this.cuts=[];       // 显式裁剪折线(圆盖等)
+  this.folds=[];      // 显式折叠折线
+  this.tabBases=new Set();
+}
+Net.prototype.face=function(pts,fill,label,labelPt){ this.faces.push({pts:pts.slice(),fill,label,labelPt}); };
+Net.prototype.label=function(pt,text){ this.labels.push({pt:pt.slice(),text}); };
+Net.prototype.fillPoly=function(pts,fill){ this.fills.push({pts:pts.slice(),fill}); };
+Net.prototype.cut=function(pts){ this.cuts.push(pts.slice()); };
+Net.prototype.fold=function(pts){ this.folds.push(pts.slice()); };
+// 小翼：沿边 A→B 自动朝外伸出梯形（用已有面的质心判断“外”）；该边变为折叠线
+Net.prototype.tab=function(A,B){
+  let sx=0,sy=0,n=0;
+  this.faces.forEach(f=>f.pts.forEach(p=>{sx+=p[0];sy+=p[1];n++;}));
+  const cen = n? [sx/n, sy/n] : [(A[0]+B[0])/2,(A[1]+B[1])/2];
+  const dx=B[0]-A[0], dy=B[1]-A[1], L=Math.hypot(dx,dy);
+  let nx=-dy/L, ny=dx/L;                              // 候选法线
+  const mx=(A[0]+B[0])/2, my=(A[1]+B[1])/2;
+  if(nx*(cen[0]-mx)+ny*(cen[1]-my) > 0){ nx=-nx; ny=-ny; }  // 指向质心(内侧)则翻转→朝外
+  const ux=dx/L, uy=dy/L, ins=Math.min(0.2,L*0.16);
+  const t=[[A[0],A[1]],
+           [A[0]+nx*TABH+ux*ins, A[1]+ny*TABH+uy*ins],
+           [B[0]+nx*TABH-ux*ins, B[1]+ny*TABH-uy*ins],
+           [B[0],B[1]]];
+  this.fillPoly(t,"#fff4e6");
+  this.cut(t.concat([t[0]]));
+  this.tabBases.add(`${R(A[0])},${R(A[1])}|${R(B[0])},${R(B[1])}`);
+};
+// 独立圆盖：圆周分段(小翼根部弧=折叠，间隔弧=裁剪)，外加一圈小翼
+Net.prototype.cap=function(cx,cy,r,fill,label){
+  const N=10, span=(2*Math.PI)/N*0.6, gap=(2*Math.PI)/N*0.4, STEP=6;
+  let a=0;
+  this.fillPoly(arcPts(cx,cy,r,0,2*Math.PI,60), fill);  // 圆面填充
+  if(label) this.label([cx,cy], label);                 // 圆盖标签(不画外框)
+  for(let i=0;i<N;i++){
+    const a0=a, a1=a+span, a2=a+span+gap;
+    this.fold(arcPts(cx,cy,r,a0,a1,STEP));               // 小翼根部=折叠
+    this.cut(arcPts(cx,cy,r,a1,a2,4));                   // 间隔=裁剪
+    const outer=arcPts(cx,cy,r+TABH,a0,a1,STEP);
+    const body=[[cx+r*Math.cos(a0),cy+r*Math.sin(a0)], ...outer, [cx+r*Math.cos(a1),cy+r*Math.sin(a1)]];
+    this.fillPoly(body,"#fff4e6");
+    this.cut(body.concat([body[0]]));
+    a=a2;
+  }
+};
+function arcPts(cx,cy,r,a0,a1,steps){
+  const out=[]; for(let i=0;i<=steps;i++){ const t=a0+(a1-a0)*i/steps; out.push([cx+r*Math.cos(t), cy+r*Math.sin(t)]); } return out;
+}
+
+/* ---------- 各形状几何 ---------- */
+function buildCube(n){
+  const a=P.a;
+  n.face([[0,0],[a,0],[a,a],[0,a]], PALETTE[0], "上");
+  n.face([[0,a],[a,a],[a,2*a],[0,2*a]], PALETTE[1], "前");
+  n.face([[0,2*a],[a,2*a],[a,3*a],[0,3*a]], PALETTE[2], "下");
+  n.face([[0,3*a],[a,3*a],[a,4*a],[0,4*a]], PALETTE[3], "后");
+  n.face([[-a,a],[0,a],[0,2*a],[-a,2*a]], PALETTE[4], "左");
+  n.face([[a,a],[2*a,a],[2*a,2*a],[a,2*a]], PALETTE[5], "右");
+  // 7 条粘贴缝，每缝一小翼（覆盖上/下/左/右/侧所有需要粘合的边）
+  n.tab([0,4*a],[a,4*a]);        // 后·底边（上后缝）
+  n.tab([-a,a],[0,a]);           // 左·顶边（上左缝）
+  n.tab([a,a],[2*a,a]);          // 右·顶边（上右缝）
+  n.tab([0,2*a],[0,3*a]);        // 下·左边（下左缝）
+  n.tab([a,2*a],[a,3*a]);        // 下·右边（下右缝）
+  n.tab([-a,a],[-a,2*a]);        // 左·外边（左后缝）
+  n.tab([2*a,a],[2*a,2*a]);      // 右·外边（右后缝）
+}
+function buildCuboid(n){
+  const {a,b,h}=P, W=2*a+2*b;
+  n.face([[0,0],[a,0],[a,h],[0,h]], PALETTE[0], "前");
+  n.face([[a,0],[a+b,0],[a+b,h],[a,h]], PALETTE[1], "右");
+  n.face([[a+b,0],[2*a+b,0],[2*a+b,h],[a+b,h]], PALETTE[2], "后");
+  n.face([[2*a+b,0],[W,0],[W,h],[2*a+b,h]], PALETTE[3], "左");
+  n.face([[0,-b],[a,-b],[a,0],[0,0]], PALETTE[4], "上");
+  n.face([[0,h],[a,h],[a,h+b],[0,h+b]], PALETTE[5], "下");
+  // 7 条粘贴缝
+  n.tab([a,0],[a+b,0]);           // 右·顶边
+  n.tab([0,-b],[a,-b]);           // 上·顶边
+  n.tab([2*a+b,0],[W,0]);         // 左·顶边
+  n.tab([a,h],[a+b,h]);           // 右·底边
+  n.tab([0,h+b],[a,h+b]);         // 下·底边
+  n.tab([2*a+b,h],[W,h]);         // 左·底边
+  n.tab([W,0],[W,h]);             // 左·右边（闭合）
+}
+function buildCylinder(n){
+  const {r,h}=P, W=2*Math.PI*r;
+  n.face([[0,0],[W,0],[W,h],[0,h]], PALETTE[0], "侧面", [W/2,h/2]);
+  n.tab([0,h],[0,0]);               // 左边小翼（闭合圆筒）
+  n.cap(W/2, -r-1.3, r, PALETTE[1], "上底");
+  n.cap(W/2, h+r+1.3, r, PALETTE[2], "下底");
+}
+function buildCone(n){
+  const {r,l}=P, theta=(r/l)*2*Math.PI;
+  const arc=arcPts(0,0,l,0,theta,64), end=arc[arc.length-1];
+  n.face([[0,0]].concat(arc), PALETTE[0], "侧面", [l*Math.cos(theta/2)*0.55, l*Math.sin(theta/2)*0.55]);
+  n.tab(end,[0,0]);                 // 一条半径=小翼(粘合)
+  n.cap(l+1.6+r, r, r, PALETTE[1], "底面");
+}
+function buildFrustum(n){
+  const {r1,r2,l}=P, phi=(r2-r1)/l*2*Math.PI;
+  const R2=r2*l/(r2-r1), R1=r1*l/(r2-r1);
+  const outer=arcPts(0,0,R2,0,phi,72), inner=arcPts(0,0,R1,0,phi,72).reverse();
+  n.face(outer.concat(inner), PALETTE[0], "侧面", [Math.cos(phi/2)*(R1+R2)/2, Math.sin(phi/2)*(R1+R2)/2]);
+  n.tab([R2*Math.cos(phi),R2*Math.sin(phi)],[R1*Math.cos(phi),R1*Math.sin(phi)]);
+  const baseY=R2*Math.sin(phi)+R2+1.6;
+  n.cap(R2+1.6+r2, baseY, r2, PALETTE[1], "下底");
+  n.cap(R2+1.6+r2 + 2*r2+2.2, baseY, r1, PALETTE[2], "上底");
+}
+function buildPrism(n){
+  const {a,h}=P, triH=a*Math.sqrt(3)/2;
+  n.face([[0,0],[a,0],[a,h],[0,h]], PALETTE[0], "侧面");
+  n.face([[a,0],[2*a,0],[2*a,h],[a,h]], PALETTE[1], "侧面");
+  n.face([[2*a,0],[3*a,0],[3*a,h],[2*a,h]], PALETTE[2], "侧面");
+  n.face([[a,0],[2*a,0],[1.5*a,-triH]], PALETTE[3], "底面", [1.5*a,-triH/3]);
+  n.face([[a,h],[2*a,h],[1.5*a,h+triH]], PALETTE[4], "底面", [1.5*a,h+triH/3]);
+  n.tab([0,0],[0,h]);               // 侧面带闭合
+  n.tab([a,0],[1.5*a,-triH]);       // 上底·左腰
+  n.tab([2*a,0],[1.5*a,-triH]);     // 上底·右腰
+  n.tab([a,h],[1.5*a,h+triH]);      // 下底·左腰
+  n.tab([2*a,h],[1.5*a,h+triH]);    // 下底·右腰
+}
+function buildPyramid(n){
+  const {a,s}=P;
+  n.face([[0,0],[a,0],[a,a],[0,a]], PALETTE[0], "底面", [a/2,a/2]);
+  const T=[[[0,0],[a,0],[a/2,-s]],[[a,0],[a,a],[a+s,a/2]],[[a,a],[0,a],[a/2,a+s]],[[0,a],[0,0],[-s,a/2]]];
+  T.forEach((t,i)=>n.face(t, PALETTE[i+1], "侧面"));
+  n.tab([a,0],[a/2,-s]);
+  n.tab([a,a],[a+s,a/2]);
+  n.tab([0,a],[a/2,a+s]);
+  n.tab([0,0],[-s,a/2]);
+}
+const BUILDERS={cube:buildCube,cuboid:buildCuboid,cylinder:buildCylinder,cone:buildCone,frustum:buildFrustum,prism:buildPrism,pyramid:buildPyramid};
+
+/* ---------- 边推导 + 渲染 ---------- */
+function deriveEdges(n){
+  // 统计每条边出现次数
+  const map=new Map();
+  const add=(p,q)=>{
+    const k=`${R(p[0])},${R(p[1])}|${R(q[0])},${R(q[1])}`;
+    const rk=`${R(q[0])},${R(q[1])}|${R(p[0])},${R(p[1])}`;
+    const key= k<rk?k:rk;
+    const e=map.get(key); if(e) e.c++; else map.set(key,{a:p,b:q,c:1});
+  };
+  n.faces.forEach(f=>{ const p=f.pts; for(let i=0;i<p.length;i++) add(p[i], p[(i+1)%p.length]); });
+  const cuts=[], folds=[];
+  map.forEach(e=>{
+    const tb=`${R(e.a[0])},${R(e.a[1])}|${R(e.b[0])},${R(e.b[1])}`;
+    const tbR=`${R(e.b[0])},${R(e.b[1])}|${R(e.a[0])},${R(e.a[1])}`;
+    const isTab = n.tabBases.has(tb) || n.tabBases.has(tbR);
+    if(e.c>=2 || isTab) folds.push([e.a,e.b]); else cuts.push([e.a,e.b]);
+  });
+  return {cuts, folds};
+}
+function render(){
+  const n=new Net(); BUILDERS[SHAPE](n);
+  const {cuts:ecuts, folds:efolds}=deriveEdges(n);
+  // 合并所有需要绘制的内容
+  const allCuts=[...n.cuts, ...ecuts];
+  const allFolds=[...n.folds, ...efolds];
+  // 包围盒
+  let xs=[],ys=[]; const grab=pts=>pts.forEach(p=>{xs.push(p[0]);ys.push(p[1]);});
+  [...n.faces,...n.fills].forEach(f=>grab(f.pts));
+  allCuts.forEach(grab); allFolds.forEach(grab);
+  const pad=0.6;
+  const minX=Math.min(...xs)-pad, maxX=Math.max(...xs)+pad, minY=Math.min(...ys)-pad, maxY=Math.max(...ys)+pad;
+  const w=(maxX-minX)*PX, h=(maxY-minY)*PX;
+  const P2=pts=>pts.map(q=>(q[0]*PX).toFixed(1)+","+(q[1]*PX).toFixed(1)).join(" ");
+  let svg=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="${(minX*PX).toFixed(1)} ${(minY*PX).toFixed(1)} ${w.toFixed(1)} ${h.toFixed(1)}" width="${w.toFixed(0)}" height="${h.toFixed(0)}">`;
+  svg+=`<rect x="${(minX*PX).toFixed(1)}" y="${(minY*PX).toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" fill="#fff"/>`;
+  // 填充
+  [...n.faces,...n.fills].forEach(p=>{
+    if(p.fill!=="none") svg+=`<polygon points="${P2(p.pts)}" fill="${p.fill}" stroke="none" opacity="0.92"/>`;
+  });
+  // 折叠
+  allFolds.forEach(seg=> svg+=`<polyline points="${P2(seg)}" fill="none" stroke="${FOLD}" stroke-width="${FOLD_W}" stroke-dasharray="${DASH}" stroke-linecap="round" stroke-linejoin="round"/>`);
+  // 裁剪
+  allCuts.forEach(seg=> svg+=`<polyline points="${P2(seg)}" fill="none" stroke="${CUT}" stroke-width="${CUT_W}" stroke-linecap="round" stroke-linejoin="round"/>`);
+  // 标签
+  const emitLabel=(cx,cy,txt,size)=> svg+=`<text x="${(cx*PX).toFixed(1)}" y="${(cy*PX).toFixed(1)}" font-size="${(PX*size).toFixed(0)}" fill="#666" text-anchor="middle" dominant-baseline="middle" style="pointer-events:none">${txt}</text>`;
+  n.faces.forEach(p=>{
+    if(!p.label) return;
+    let cx,cy; if(p.labelPt){cx=p.labelPt[0];cy=p.labelPt[1];} else{let sx=0,sy=0;p.pts.forEach(q=>{sx+=q[0];sy+=q[1];});cx=sx/p.pts.length;cy=sy/p.pts.length;}
+    emitLabel(cx,cy,p.label,0.3);
+  });
+  n.labels.forEach(l=> emitLabel(l.pt[0],l.pt[1],l.text,0.28));
+  svg+=`</svg>`;
+  document.getElementById("preview").innerHTML=svg;
+}
+
+/* ---------- 参数 UI ---------- */
+const NAMES={a:"边长 a",b:"宽 b",h:"高 h",r:"半径 r",l:"母线 l",r1:"上半径",r2:"下半径",s:"斜高 s"};
+const RANGES={a:[3,9,1],b:[3,9,1],h:[3,9,1],r:[2,5,0.5],l:[4,9,0.5],r1:[1,3,0.5],r2:[3,6,0.5],s:[4,9,0.5]};
+function paramUI(){
+  const box=document.getElementById("params"); box.innerHTML=""; const d=DEFS[SHAPE];
+  Object.keys(d).forEach(k=>{
+    P[k]=d[k]; const [lo,hi,st]=RANGES[k];
+    const row=document.createElement("div"); row.className="param";
+    row.innerHTML=`<label>${NAMES[k]}</label><input type="range" min="${lo}" max="${hi}" step="${st}" value="${d[k]}"><span class="val">${d[k]} cm</span>`;
+    const inp=row.querySelector("input"), val=row.querySelector(".val");
+    inp.addEventListener("input",()=>{ P[k]=parseFloat(inp.value); val.textContent=P[k]+" cm"; render(); });
+    box.appendChild(row);
+  });
+}
+
+/* ---------- 事件 ---------- */
+document.getElementById("shapeSeg").addEventListener("click",e=>{
+  const b=e.target.closest("button"); if(!b) return;
+  document.querySelectorAll("#shapeSeg button").forEach(x=>x.classList.remove("active"));
+  b.classList.add("active"); SHAPE=b.dataset.shape; paramUI(); render();
+});
+document.getElementById("printBtn").addEventListener("click",()=>window.print());
+document.getElementById("dlSvg").addEventListener("click",()=>{
+  const svg=document.querySelector("#preview svg").outerHTML;
+  const blob=new Blob([`<?xml version="1.0" encoding="UTF-8"?>\n`+svg],{type:"image/svg+xml"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+  a.download=`${document.querySelector("#shapeSeg button.active").textContent}-展开图.svg`; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+});
+document.getElementById("dlPng").addEventListener("click",()=>{
+  const svg=document.querySelector("#preview svg").cloneNode(true);
+  svg.setAttribute("xmlns","http://www.w3.org/2000/svg");
+  const data=new XMLSerializer().serializeToString(svg);
+  const img=new Image();
+  img.onload=()=>{
+    const sc=4, w=svg.width.baseVal.value*sc, h=svg.height.baseVal.value*sc;
+    const cv=document.createElement("canvas"); cv.width=w; cv.height=h;
+    const ctx=cv.getContext("2d"); ctx.fillStyle="#fff"; ctx.fillRect(0,0,w,h); ctx.drawImage(img,0,0,w,h);
+    const a=document.createElement("a"); a.href=cv.toDataURL("image/png");
+    a.download=`${document.querySelector("#shapeSeg button.active").textContent}-展开图.png`; a.click();
+  };
+  img.src="data:image/svg+xml;base64,"+btoa(unescape(encodeURIComponent(data)));
+});
+
+paramUI(); render();
+</script>
+</body>
+</html>

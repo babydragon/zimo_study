@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>🎲 立方体能折吗？· 观察物体</title>
+<link rel="stylesheet" href="./css/common.css" />
+<style>
+  .gallery { display:grid; grid-template-columns:repeat(auto-fill,minmax(78px,1fr)); gap:7px; }
+  .thumb { position:relative; background:#fff; border:3px solid #e0d6c2; border-radius:10px; padding:4px; cursor:pointer; aspect-ratio:1/1; }
+  .thumb svg { width:100%; height:100%; display:block; }
+  .thumb.fold { border-color:#51cf66; background:#f0fff0; }
+  .thumb.not  { border-color:#c9c2b5; background:#f4f2ec; }
+  .thumb.active { outline:3px solid #ff6b35; outline-offset:1px; }
+  .thumb .badge { position:absolute; top:2px; right:2px; font-size:.56rem; font-weight:800; padding:1px 4px; border-radius:6px; }
+  .thumb.fold .badge { background:#37b24d; color:#fff; }
+  .thumb.not  .badge { background:#b0a89a; color:#fff; }
+  .ctl { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .ctl input[type=range]{ flex:1; min-width:140px; height:34px; }
+  .know{ font-size:.9rem; line-height:1.6; color:var(--ink-soft); }
+  .legend{ display:flex; gap:12px; font-size:.8rem; color:var(--ink-soft); margin:4px 0; flex-wrap:wrap; }
+  .legend i{ width:12px;height:12px;border-radius:3px;display:inline-block;vertical-align:middle;margin-right:4px;}
+</style>
+</head>
+<body>
+<main class="page">
+  <div class="topbar">
+    <a class="back" href="./index.html">← 返回</a>
+    <h1 class="title">🎲 立方体能折吗？</h1>
+  </div>
+  <p class="subtitle selectable">下面是 6 个正方形拼成的<b>全部 35 种</b>排法。<span style="color:#37b24d;font-weight:700">绿色的 11 种能折</span>成立方体，<span style="color:#888;font-weight:700">灰色的不能</span>。点一个，看它怎么折！</p>
+
+  <div class="legend">
+    <span><i style="background:#51cf66"></i>能折成立方体（11 种）</span>
+    <span><i style="background:#c9c2b5"></i>折不成（24 种）</span>
+  </div>
+  <div class="gallery" id="gallery"></div>
+
+  <h3 class="blk">🔍 3D 折叠演示</h3>
+  <div class="stage"><div class="hint">拖动转一转 · 用滑块慢慢折</div></div>
+
+  <div class="ctl" style="margin-top:10px;">
+    <button class="btn good" id="btnFold">▶ 折叠</button>
+    <button class="btn ghost" id="btnReset">↻ 重置</button>
+    <button class="btn ghost" id="btnNext">🔄 换一个</button>
+    <input type="range" id="slider" min="0" max="100" value="0" />
+    <span id="pct" style="font-weight:700;min-width:42px;text-align:right">0%</span>
+  </div>
+  <div class="feedback" id="fb"></div>
+
+  <div class="card know selectable" style="margin-top:8px;">
+    💡 <b>小知识：</b>正方体有 6 个面。把 6 个正方形摊平拼在一起叫「展开图」。一共有 35 种拼法，但<b>只有 11 种</b>能折回正方体！而且正方体<b>相对的两个面</b>（比如上面和下面）数字加起来常常正好是 7 哦。
+  </div>
+</main>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+/* ===================== 1. 枚举 35 个自由六连方 ===================== */
+const norm = cells => { let mx=1e9,my=1e9; cells.forEach(c=>{mx=Math.min(mx,c[0]);my=Math.min(my,c[1])}); return cells.map(c=>[c[0]-mx,c[1]-my]); };
+const sym = cells => {                 // 8 种对称
+  let v=[cells];
+  let cur=cells;
+  for(let r=0;r<3;r++){ cur=cur.map(c=>[-c[1],c[0]]); v.push(cur); }      // 旋转 90/180/270
+  cur=cells.map(c=>[-c[0],c[1]]); v.push(cur);                           // 镜像
+  for(let r=0;r<3;r++){ cur=cur.map(c=>[-c[1],c[0]]); v.push(cur); }
+  return v;
+};
+const canon = cells => {
+  let best=null;
+  sym(cells).forEach(s=>{ const n=norm(s).map(c=>c.join(',')).sort().join('|'); if(best===null||n<best) best=n; });
+  return best;
+};
+function enumerate(){
+  let cur=new Map(); cur.set(canon([[0,0]]), norm([[0,0]]));
+  for(let size=1;size<6;size++){
+    const nxt=new Map();
+    for(const cells of cur.values()){
+      for(const c of cells){
+        for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+          const nc=[c[0]+dx,c[1]+dy];
+          if(!cells.some(p=>p[0]===nc[0]&&p[1]===nc[1])){
+            const g=[...cells,nc]; const k=canon(g);
+            if(!nxt.has(k)) nxt.set(k, norm(g));
+          }
+        }
+      }
+    }
+    cur=nxt;
+  }
+  return [...cur.values()];
+}
+
+/* ===================== 2. 折叠判定（cube-face 推导） ===================== */
+const rot=(p,axis,deg)=>{ const s=Math.sin(deg*Math.PI/180),c=Math.cos(deg*Math.PI/180);
+  const d=axis[0]*p[0]+axis[1]*p[1]+axis[2]*p[2];
+  const par=[axis[0]*d,axis[1]*d,axis[2]*d], per=[p[0]-par[0],p[1]-par[1],p[2]-par[2]];
+  const cr=[axis[1]*p[2]-axis[2]*p[1],axis[2]*p[0]-axis[0]*p[2],axis[0]*p[1]-axis[1]*p[0]];
+  return [par[0]+c*per[0]+s*cr[0], par[1]+c*per[1]+s*cr[1], par[2]+c*per[2]+s*cr[2]];
+};
+// 子面 frame：x方向移动绕 v 轴，y方向移动绕 u 轴（90°）
+function childFrame(pf,dx,dy){
+  let axis,angle;
+  if(dx!==0){ axis=pf.v; angle= dx>0?90:-90; } else { axis=pf.u; angle= dy>0?-90:90; }
+  return { u:rot(pf.u,axis,angle), v:rot(pf.v,axis,angle), n:rot(pf.n,axis,angle) };
+}
+function analyze(cells){
+  const key=(x,y)=>x+','+y, map=new Map();
+  cells.forEach((c,i)=>map.set(key(c[0],c[1]),i));
+  const N=cells.length, root=0;
+  const frames=new Array(N), parent=new Array(N).fill(-1), moveDir=new Array(N);
+  frames[root]={u:[1,0,0],v:[0,1,0],n:[0,0,1]};
+  const seen=new Array(N).fill(false); seen[root]=true; const q=[root];
+  while(q.length){
+    const cur=q.shift();
+    for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+      const ni=map.get(key(cells[cur][0]+dx,cells[cur][1]+dy));
+      if(ni!==undefined && !seen[ni]){ seen[ni]=true; parent[ni]=cur; moveDir[ni]=[dx,dy]; frames[ni]=childFrame(frames[cur],dx,dy); q.push(ni); }
+    }
+  }
+  const rkey=n=>n.map(Math.round).join(',');
+  const occ={}; let foldable=true, conflict=null;
+  for(let i=0;i<N;i++){ const k=rkey(frames[i].n); if(occ[k]!==undefined){ foldable=false; conflict=[occ[k],i]; break;} occ[k]=i; }
+  return { frames, parent, moveDir, foldable, conflict, root };
+}
+
+/* 生成全部数据 */
+const ALL = enumerate().map(cells=>({cells, ...analyze(cells)}));
+// 自检（控制台）
+const foldN = ALL.filter(x=>x.foldable).length;
+console.log('[cube-nets] 六连方数=',ALL.length,' 可折叠=',foldN); // 应为 35 / 11
+ALL.sort((a,b)=> (b.foldable-a.foldable)); // 能折的排前面
+
+/* ===================== 3. 缩略图画廊 ===================== */
+const COLORS=['#ffd6a5','#caffbf','#9bf6ff','#ffc6ff','#fdffb6','#bdb2ff'];
+const gallery=document.getElementById('gallery');
+function thumbSVG(cells,foldable){
+  const n=norm(cells); let mx=0,my=0; n.forEach(c=>{mx=Math.max(mx,c[0]);my=Math.max(my,c[1])});
+  const S=15, pad=3, W=(mx+1)*S+pad*2, H=(my+1)*S+pad*2;
+  let s=`<svg viewBox="0 0 ${W} ${H}">`;
+  n.forEach((c,i)=>{
+    const x=pad+c[0]*S, y=pad+c[1]*S;
+    s+=`<rect x="${x+0.5}" y="${y+0.5}" width="${S-1}" height="${S-1}" rx="2" fill="${foldable?COLORS[i%6]:'#d8d2c4'}" stroke="${foldable?'#37b24d':'#b0a89a'}" stroke-width="1"/>`;
+  });
+  return s+'</svg>';
+}
+let SEL=0;
+function renderGallery(){
+  gallery.innerHTML='';
+  ALL.forEach((it,i)=>{
+    const d=document.createElement('div');
+    d.className='thumb '+(it.foldable?'fold':'not')+(i===SEL?' active':'');
+    d.innerHTML=thumbSVG(it.cells,it.foldable)+`<span class="badge">${it.foldable?'能折':'不能'}</span>`;
+    d.addEventListener('click',()=>{ SEL=i; renderGallery(); select(); });
+    gallery.appendChild(d);
+  });
+}
+
+/* ===================== 4. Three.js 铰链折叠场景 ===================== */
+const stage=document.querySelector('.stage');
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(2,window.devicePixelRatio));
+stage.appendChild(renderer.domElement);
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0xeaf6ff);
+// 默认从 +Z 方向看过去，让展开图明显平铺在 XY 平面上，折叠时沿 Z 方向前后折起
+const camera=new THREE.PerspectiveCamera(45,1,0.1,100); camera.position.set(1.4,1.2,8.2);
+const controls=new OrbitControls(camera,renderer.domElement); controls.target.set(0,0,0.35); controls.enablePan=false; controls.update();
+scene.add(new THREE.AmbientLight(0xffffff,0.75));
+const dl=new THREE.DirectionalLight(0xffffff,0.7); dl.position.set(5,8,6); scene.add(dl);
+// 参考格线改为 XY 平面，避免默认的 XZ 地面网格误导观察方向
+const guidePts=[];
+for(let i=-5;i<=5;i++){
+  guidePts.push(-5, i, -0.08,  5, i, -0.08);
+  guidePts.push(i, -5, -0.08,  i, 5, -0.08);
+}
+const guideGeo=new THREE.BufferGeometry();
+guideGeo.setAttribute('position', new THREE.Float32BufferAttribute(guidePts, 3));
+scene.add(new THREE.LineSegments(guideGeo, new THREE.LineBasicMaterial({ color: 0xffd9b3, transparent: true, opacity: 0.7 })));
+
+const top=new THREE.Group(); scene.add(top);     // 整体偏移容器
+let hinges=[], disposables=[], tCur=0;
+
+function disposeAll(){ disposables.forEach(o=>{ o.geometry&&o.geometry.dispose(); o.material&&(Array.isArray(o.material)?o.material.forEach(m=>m.dispose()):o.material.dispose()); }); while(top.children.length) top.remove(top.children[0]); hinges=[]; disposables=[]; }
+
+function select(){
+  disposeAll();
+  const it=ALL[SEL];
+  const cells=it.cells, N=cells.length, root=it.root;
+  const ox=cells[root][0], oy=cells[root][1];
+  const cpos=i=>[cells[i][0]-ox, cells[i][1]-oy];   // 以 root 为原点的中心
+  // 整体居中：用 net 的 bbox 中心
+  let minx=1e9,maxx=-1e9,miny=1e9,maxy=-1e9; cells.forEach((c,i)=>{const p=cpos(i);minx=Math.min(minx,p[0]);maxx=Math.max(maxx,p[0]);miny=Math.min(miny,p[1]);maxy=Math.max(maxy,p[1]);});
+  top.position.set(-(minx+maxx)/2, -(miny+maxy)/2, 0);
+
+  const cellGroups=new Array(N);
+  const geo=new THREE.BoxGeometry(0.94,0.94,0.05);
+  const build=(i)=>{
+    const g=new THREE.Group();                  // 该面中心
+    const col = (it.conflict && (it.conflict[0]===i||it.conflict[1]===i)) ? 0xff6b6b : COLORS[i%6];
+    const mat=new THREE.MeshLambertMaterial({color:col});
+    const mesh=new THREE.Mesh(geo,mat); g.add(mesh);
+    const eg=new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({color:0x555555}));
+    g.add(eg); disposables.push(mesh,eg);
+    cellGroups[i]=g;
+    return g;
+  };
+  // 递归：把 child 的 cellGroup 挂到 parent 的铰链上
+  const order=[]; (function bfs(){ const qq=[root]; const vis=new Array(N).fill(false); vis[root]=true; while(qq.length){const c=qq.shift();order.push(c); for(let i=0;i<N;i++){if(it.parent[i]===c){vis[i]=true;qq.push(i);}}}})();
+  const rootG=build(root); top.add(rootG);
+  order.forEach(i=>{ if(i===root) return; const p=it.parent[i];
+    const pc=cpos(p), cc=cpos(i); const mid=[(pc[0]+cc[0])/2,(pc[1]+cc[1])/2,0];
+    const hinge=new THREE.Group(); hinge.position.set(mid[0]-pc[0], mid[1]-pc[1],0); // 相对 parent cellGroup 原点
+    const cg=build(i); cg.position.set(cc[0]-mid[0], cc[1]-mid[1],0); hinge.add(cg);
+    cellGroups[p].add(hinge);
+    hinges.push({group:hinge, dir:it.moveDir[i]});
+  });
+  setT(0); updateFB();
+}
+
+/* ===================== 5. 动画 ===================== */
+function applyT(t){
+  hinges.forEach(h=>{ const [dx,dy]=h.dir;
+    // 朝默认相机侧（+Z 方向）折，避免折叠过程被自身遮挡太多
+    if(dx!==0) h.group.rotation.y=-(dx>0?1:-1)*Math.PI/2*t;
+    else       h.group.rotation.x=-(dy>0?-1:1)*Math.PI/2*t;
+  });
+}
+function setT(t){ tCur=t; applyT(t); document.getElementById('slider').value=Math.round(t*100); document.getElementById('pct').textContent=Math.round(t*100)+'%'; }
+function updateFB(){
+  const it=ALL[SEL], fb=document.getElementById('fb');
+  if(tCur>0.02 && tCur<0.98){ fb.className='feedback info'; fb.textContent='🔄 正在折…'; return; }
+  if(it.foldable){ fb.className='feedback ok'; fb.textContent='✓ 这种能折成立方体！6 个面刚好合上。'; }
+  else{ fb.className='feedback no'; fb.textContent='✗ 折不成！有两个面撞到一起了（红色那两个）。'; }
+}
+let anim=null;
+function animateTo(target){
+  if(anim) cancelAnimationFrame(anim); const start=tCur, t0=performance.now(), dur=900;
+  const ease=x=>x<.5?2*x*x:1-Math.pow(-2*x+2,2)/2;
+  const step=now=>{ const k=Math.min(1,(now-t0)/dur); setT(start+(target-start)*ease(k));
+    if(k<1){ anim=requestAnimationFrame(step); } else { anim=null; updateFB(); } };
+  anim=requestAnimationFrame(step);
+}
+
+/* 控件 */
+document.getElementById('slider').addEventListener('input',e=>{ if(anim){cancelAnimationFrame(anim);anim=null;} setT(parseInt(e.target.value)/100); updateFB(); syncLabel(); });
+function syncLabel(){ document.getElementById('btnFold').textContent = tCur>0.5 ? '◀ 展开' : '▶ 折叠'; }
+document.getElementById('btnFold').addEventListener('click',()=>{ const tgt=(tCur>0.5?0:1); animateTo(tgt); syncLabel(); });
+document.getElementById('btnReset').addEventListener('click',()=>{ if(anim){cancelAnimationFrame(anim);anim=null;} setT(0); syncLabel(); updateFB(); });
+document.getElementById('btnNext').addEventListener('click',()=>{ SEL=(SEL+1)%ALL.length; renderGallery(); select(); syncLabel(); });
+
+/* 渲染循环 + 自适应 */
+function resize(){ const w=stage.clientWidth, h=stage.clientHeight; renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix(); }
+new ResizeObserver(resize).observe(stage); resize();
+(function loop(){ requestAnimationFrame(loop); controls.update(); renderer.render(scene,camera); })();
+
+renderGallery(); select();
+</script>
+</body>
+</html>

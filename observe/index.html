@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>三年级数学·观察物体</title>
+  <link rel="stylesheet" href="./css/common.css" />
+  <style>
+    .hero {
+      text-align: center;
+      padding: 14px 6px 6px;
+    }
+    .hero h1 {
+      margin: 0;
+      font-size: 1.5rem;
+    }
+    .hero p {
+      margin: 8px auto 0;
+      color: var(--ink-soft);
+      max-width: 460px;
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+    .menu {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: 1fr;
+      margin-top: 16px;
+    }
+    @media (min-width: 560px) {
+      .menu { grid-template-columns: 1fr 1fr; }
+    }
+    .mcard {
+      display: block;
+      text-decoration: none;
+      color: inherit;
+      background: var(--card);
+      border: 2px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 16px 14px;
+      position: relative;
+      overflow: hidden;
+    }
+    .mcard .ico {
+      font-size: 2rem;
+      line-height: 1;
+    }
+    .mcard h2 {
+      margin: 8px 0 4px;
+      font-size: 1.1rem;
+    }
+    .mcard p {
+      margin: 0;
+      color: var(--ink-soft);
+      font-size: 0.88rem;
+      line-height: 1.5;
+    }
+    .mcard .tagline {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <div class="hero">
+      <h1>👁️ 观察物体</h1>
+      <p>三年级 · 数学第一单元。换个方向看一看，把立体图形摊开来折一折，玩转正视图、俯视图和展开图！</p>
+    </div>
+
+    <section class="menu">
+      <a class="mcard" href="./views.html">
+        <span class="ico">🧊</span>
+        <h2>看立体图形</h2>
+        <p>转动正方体、圆柱、球、圆锥，切换前/后/左/右/上/下 6 个视角，看看每个方向看到的形状。</p>
+        <span class="tagline tag neu">观察</span>
+      </a>
+
+      <a class="mcard" href="./stacking.html">
+        <span class="ico">🧱</span>
+        <h2>堆叠看三视图</h2>
+        <p>自己摆放积木，或一键随机堆一堆，再看正视图、左视图、右视图、俯视图。</p>
+        <span class="tagline tag neu">三视图</span>
+      </a>
+
+      <a class="mcard" href="./cube-nets.html">
+        <span class="ico">🎲</span>
+        <h2>立方体能折吗？</h2>
+        <p>35 种六连方排列，点一下看它能不能折成立方体，配动画演示折叠过程。</p>
+        <span class="tagline tag good">折叠</span>
+      </a>
+
+      <a class="mcard" href="./nets.html">
+        <span class="ico">✂️</span>
+        <h2>打印展开图</h2>
+        <p>正方体、长方体、圆柱、圆锥、圆台……下载带裁剪线和折叠线的展开图，打印后剪折成立体图形。</p>
+        <span class="tagline tag neu">打印</span>
+      </a>
+    </section>
+
+    <p class="feedback info selectable" style="margin-top:18px;font-size:0.85rem;">
+      💡 小贴士：建议在 Wi-Fi 下第一次打开（需要联网加载 3D 画面），之后可离线使用。
+    </p>
+  </main>
+</body>
+</html>

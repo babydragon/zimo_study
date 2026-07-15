@@ -1,0 +1,252 @@
+/* =========================================================================
+   observe/ 共享设计系统 —— 三年级数学「观察物体」小工具
+   移动端优先 · 儿童友好 · 暖色调 · 大按钮 · 触摸友好
+   ========================================================================= */
+
+:root {
+  /* 主色调：暖橙 + 奶油，与站点整体风格一致 */
+  --bg: #fff8e7;
+  --bg-soft: #fff3d6;
+  --card: #ffffff;
+  --ink: #2d3436;
+  --ink-soft: #5b6770;
+  --muted: #8a949c;
+  --primary: #ff6b35;
+  --primary-dark: #e85420;
+  --primary-soft: #ffe0cc;
+  --accent: #4dabf7;       /* 蓝：辅助操作 */
+  --accent-dark: #2b8fd6;
+  --good: #51cf66;         /* 绿：正确/可折叠 */
+  --good-dark: #37b24d;
+  --bad: #ff8787;          /* 红：错误/不可折叠 */
+  --warn: #ffd43b;         /* 黄：提示 */
+  --line: #ffe0cc;
+  --line-strong: #f5b88f;
+  --fold: #6c5ce7;         /* 折叠线紫色 */
+  --cut: #222;             /* 裁剪线深色 */
+  --shadow: 0 8px 24px rgba(255, 152, 0, 0.16);
+  --shadow-soft: 0 4px 14px rgba(0, 0, 0, 0.08);
+  --radius: 18px;
+  --radius-sm: 12px;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei",
+    "Comic Sans MS", sans-serif;
+  background: radial-gradient(circle at 20% 0%, #ffe5cc 0%, var(--bg) 60%);
+  color: var(--ink);
+  min-height: 100vh;
+  /* 桌面端限宽居中，移动端全宽 */
+  padding: 0;
+  user-select: none;
+  -webkit-user-select: none;
+  overflow-x: hidden;
+}
+
+/* 允许选中文字的区域（如说明文字） */
+.selectable {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* ---------- 页面外壳 ---------- */
+.page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 12px 12px 40px;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 2px 10px;
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  text-decoration: none;
+  color: var(--primary-dark);
+  background: var(--card);
+  border: 2px solid var(--line-strong);
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  box-shadow: var(--shadow-soft);
+}
+
+.title {
+  margin: 0;
+  font-size: 1.25rem;
+  flex: 1;
+  line-height: 1.2;
+}
+
+.subtitle {
+  margin: 2px 2px 14px;
+  color: var(--ink-soft);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+/* ---------- 卡片 ---------- */
+.card {
+  background: var(--card);
+  border: 2px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 14px;
+}
+
+/* ---------- 按钮 ---------- */
+.btn {
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 999px;
+  padding: 12px 18px;
+  cursor: pointer;
+  color: #fff;
+  background: var(--primary);
+  box-shadow: 0 4px 0 var(--primary-dark);
+  transition: transform 0.06s ease, box-shadow 0.06s ease;
+  touch-action: manipulation;
+}
+.btn:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--primary-dark);
+}
+.btn.ghost {
+  background: var(--card);
+  color: var(--primary-dark);
+  border: 2px solid var(--line-strong);
+  box-shadow: var(--shadow-soft);
+}
+.btn.ghost:active { transform: translateY(1px); }
+.btn.accent { background: var(--accent); box-shadow: 0 4px 0 var(--accent-dark); }
+.btn.good   { background: var(--good);   box-shadow: 0 4px 0 var(--good-dark); }
+.btn:disabled { opacity: 0.45; box-shadow: none; cursor: default; }
+
+.btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+/* 分段选择（形状/视角切换） */
+.seg {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  background: var(--bg-soft);
+  border: 2px solid var(--line);
+  border-radius: var(--radius);
+  padding: 6px;
+}
+.seg button {
+  flex: 1 1 auto;
+  font-family: inherit;
+  font-size: 0.92rem;
+  font-weight: 700;
+  border: none;
+  background: transparent;
+  color: var(--ink-soft);
+  border-radius: var(--radius-sm);
+  padding: 9px 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.seg button.active {
+  background: var(--primary);
+  color: #fff;
+  box-shadow: 0 3px 0 var(--primary-dark);
+}
+
+/* 3D 画布容器 */
+.stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background: linear-gradient(160deg, #eaf6ff 0%, #fdf6e3 100%);
+  border: 3px solid var(--line-strong);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: inset 0 -6px 16px rgba(0,0,0,0.05);
+}
+.stage canvas { display: block; width: 100% !important; height: 100% !important; }
+
+/* 角标提示 */
+.hint {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  background: rgba(255,255,255,0.9);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+}
+
+/* 反馈条 */
+.feedback {
+  margin-top: 10px;
+  min-height: 30px;
+  font-weight: 700;
+  text-align: center;
+  font-size: 1.05rem;
+}
+.feedback.ok    { color: var(--good-dark); }
+.feedback.no    { color: #e03131; }
+.feedback.info  { color: var(--accent-dark); }
+
+/* 小标签 */
+.tag {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  vertical-align: middle;
+}
+.tag.good { background: #d3f9d8; color: var(--good-dark); }
+.tag.bad  { background: #ffe3e3; color: #e03131; }
+.tag.neu  { background: #e7f5ff; color: var(--accent-dark); }
+
+/* 区块标题 */
+h3.blk {
+  margin: 16px 0 8px;
+  font-size: 1.05rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* 网格布局工具 */
+.grid {
+  display: grid;
+  gap: 8px;
+}
+.grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
+.grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+
+/* 响应式微调 */
+@media (max-width: 360px) {
+  .title { font-size: 1.1rem; }
+  .btn { font-size: 0.95rem; padding: 11px 14px; }
+}

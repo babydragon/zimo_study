@@ -1,0 +1,1150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+<title>堆积木看三视图 · 三年级数学</title>
+<link rel="stylesheet" href="./css/common.css" />
+<style>
+  /* ---------- 本页补充样式 ---------- */
+  .subtitle { margin: 4px 2px 10px; }
+
+  /* 3D 舞台右上角的方向标签 */
+  .view-tag {
+    position: absolute;
+    top: 8px; right: 8px;
+    background: var(--accent);
+    color: #fff;
+    font-weight: 800;
+    font-size: 0.8rem;
+    padding: 5px 12px;
+    border-radius: 999px;
+    box-shadow: 0 3px 0 var(--accent-dark);
+    pointer-events: none;
+    transition: transform .2s;
+  }
+  .view-tag.pop { transform: scale(1.12); }
+
+  /* 模式计数小标 */
+  .count-pill {
+    position: absolute;
+    top: 8px; left: 8px;
+    background: rgba(255,255,255,.92);
+    border: 2px solid var(--line-strong);
+    border-radius: 999px;
+    padding: 3px 10px;
+    font-size: 0.78rem;
+    font-weight: 800;
+    color: var(--primary-dark);
+  }
+
+  /* 操作按钮行 */
+  .btn-row { justify-content: center; }
+  .btn-row .btn { flex: 1 1 auto; min-width: 92px; }
+  .btn.toggle.on {
+    background: var(--bad);
+    box-shadow: 0 4px 0 #c92a2a;
+  }
+
+  /* 投影卡片 */
+  #projCard { padding: 12px; }
+  #projWrap {
+    display: flex;
+    justify-content: center;
+    margin: 6px 0 4px;
+  }
+  #proj {
+    width: 100%;
+    max-width: 320px;
+    height: auto;
+    display: block;
+  }
+  .proj-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 4px;
+  }
+  .proj-foot .lbl {
+    font-size: .92rem;
+    font-weight: 800;
+    color: var(--accent-dark);
+  }
+  .proj-foot .btn { flex: 0 0 auto; padding: 8px 12px; font-size: .85rem; }
+
+  /* 挑战卡片 */
+  #challengeCard { margin-top: 12px; }
+  .ctitle {
+    font-size: .85rem;
+    font-weight: 800;
+    color: var(--ink-soft);
+    text-align: center;
+    margin-bottom: 4px;
+  }
+  .target-svg {
+    width: 100%;
+    height: auto;
+    display: block;
+    background: var(--bg-soft);
+    border: 2px dashed var(--line-strong);
+    border-radius: 10px;
+    padding: 2px;
+  }
+  .grid.cols-2 { gap: 10px; }
+
+  /* 彩带容器 */
+  #confetti {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9999;
+    overflow: hidden;
+  }
+  .confetti-piece {
+    position: absolute;
+    width: 10px; height: 14px;
+    top: -20px;
+    border-radius: 2px;
+    will-change: transform;
+  }
+
+  /* 反馈放大 */
+  .feedback { transition: transform .15s; }
+  .feedback.pop { transform: scale(1.06); }
+
+  /* 加载提示 */
+  .loading {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ink-soft); font-weight: 700;
+    background: linear-gradient(160deg,#eaf6ff 0%,#fdf6e3 100%);
+  }
+
+  @media (max-width: 360px) {
+    .btn-row .btn { min-width: 0; font-size: .88rem; padding: 10px 8px; }
+    #projWrap { max-width: 100%; }
+  }
+</style>
+</head>
+<body>
+<main class="page">
+  <div class="topbar">
+    <a class="back" href="./index.html">← 返回</a>
+    <h1 class="title">🧱 堆积木看三视图</h1>
+  </div>
+  <p class="subtitle selectable">摆一摆方块、圆柱、球、圆锥，再看正面、左面、右面、上面看到的形状。点格子放上去，拖一下转着看！</p>
+
+  <!-- 模式切换 -->
+  <div class="seg" id="modeSeg">
+    <button data-mode="build" class="active">🧱 自己搭</button>
+    <button data-mode="random">🎲 随机一堆</button>
+    <button data-mode="challenge">🎯 挑战题</button>
+  </div>
+
+  <div class="seg" id="shapeSeg" style="margin-top:10px;">
+    <button data-shape="cube" class="active">🧱 方块</button>
+    <button data-shape="cylinder">🥫 圆柱</button>
+    <button data-shape="sphere">⚽ 球</button>
+    <button data-shape="cone">🍦 圆锥</button>
+  </div>
+
+  <!-- 3D 舞台 -->
+  <div class="stage" id="stage">
+    <div class="count-pill" id="countPill">0 块</div>
+    <div class="view-tag" id="viewTag">正视图</div>
+    <div class="hint" id="hint">👆 点格子放积木 · 🤚 拖动转一转</div>
+    <div class="loading" id="loading">正在准备积木…</div>
+  </div>
+
+  <!-- 模式相关的操作按钮 -->
+  <div class="btn-row" id="actionRow"></div>
+
+  <!-- 三视图区 -->
+  <div class="card" id="projCard">
+    <div class="seg" id="viewSeg">
+      <button data-view="front" class="active">正视图</button>
+      <button data-view="left">左视图</button>
+      <button data-view="right">右视图</button>
+      <button data-view="top">俯视图</button>
+    </div>
+    <div id="projWrap">
+      <svg id="proj" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+    <div class="proj-foot">
+      <span class="lbl" id="projLabel">👀 从前面看</span>
+      <button class="btn ghost" id="alignBtn">🎯 站到这一面看</button>
+    </div>
+  </div>
+
+  <div class="feedback" id="feedback"></div>
+
+  <!-- 挑战题目标 -->
+  <div class="card" id="challengeCard" hidden>
+    <h3 class="blk">🎯 目标：搭出这样的立体</h3>
+    <div class="grid cols-2">
+      <div>
+        <div class="ctitle">正视图（目标）</div>
+        <svg class="target-svg" id="targetFront" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+      <div>
+        <div class="ctitle">俯视图（目标）</div>
+        <svg class="target-svg" id="targetTop" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+    </div>
+    <p class="subtitle" style="margin:8px 2px 4px;font-size:.82rem;">
+      💡 只要你的<b>正视图</b>和<b>俯视图</b>都跟目标一样，就答对啦！
+    </p>
+  </div>
+
+  <div id="confetti"></div>
+</main>
+
+<script type="importmap">
+{ "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+/* =======================================================================
+   常量与状态
+   ======================================================================= */
+const N = 4;            // 4×4 地面网格
+const MAXH = 4;         // 最高堆 4 层（与 N 一致，投影为方正方形）
+const CELL = 46;        // 2D 投影每格像素
+const PAD = 12;
+
+// 支持的基础图形
+const SHAPES = {
+  cube: { label: '方块', icon: '🧱' },
+  cylinder: { label: '圆柱', icon: '🥫' },
+  sphere: { label: '球', icon: '⚽' },
+  cone: { label: '圆锥', icon: '🍦' },
+};
+const RANDOM_SHAPES = ['cube', 'cylinder', 'sphere', 'cone'];
+
+// 高度 → 颜色（低层深暖、高层亮冷，帮助区分层数）
+const HEIGHT_COLORS = [
+  '#ff6b35', // 0 橙
+  '#ffa94d', // 1 琥珀
+  '#ffd43b', // 2 黄
+  '#69db7c', // 3 绿
+  '#4dabf7', // 4 蓝
+  '#9775fa', // 5 紫
+];
+const colorForHeight = (y) => HEIGHT_COLORS[Math.min(y, HEIGHT_COLORS.length - 1)];
+
+let blocks = new Map();         // key -> shapeType
+let mode = 'build';             // build | random | challenge
+let eraseMode = false;
+let currentView = 'front';
+let currentShape = 'cube';
+let history = [];               // 撤销栈 {op, x,y,z}
+let challengeTarget = null;     // {front:[], topOcc:N×N, topMaxH:N×N, count}
+const animating = [];           // 弹跳动画 {mesh, start, delay}
+
+/* =======================================================================
+   Three.js 场景搭建
+   ======================================================================= */
+const stage = document.getElementById('stage');
+const loading = document.getElementById('loading');
+
+const scene = new THREE.Scene();
+scene.background = null; // 透出 CSS 渐变
+
+const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
+camera.position.set(4.6, 4.4, 6.2);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setClearColor(0x000000, 0);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+stage.appendChild(renderer.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 0.8, 0);
+controls.enableDamping = true;
+controls.dampingFactor = 0.12;
+controls.enablePan = false;
+controls.minDistance = 4.5;
+controls.maxDistance = 13;
+controls.maxPolarAngle = Math.PI * 0.49;  // 不能转到地下
+controls.minPolarAngle = Math.PI * 0.015; // 接近正上方也可以（俯视图对齐用）
+controls.rotateSpeed = 0.9;
+
+// 灯光
+scene.add(new THREE.AmbientLight(0xffffff, 0.45));
+const hemi = new THREE.HemisphereLight(0xcfeaff, 0xfff0c0, 0.55);
+scene.add(hemi);
+const dir = new THREE.DirectionalLight(0xffffff, 0.95);
+dir.position.set(5, 8.5, 6);
+dir.castShadow = true;
+dir.shadow.mapSize.set(1024, 1024);
+dir.shadow.camera.near = 0.5;
+dir.shadow.camera.far = 30;
+dir.shadow.camera.left = -5;
+dir.shadow.camera.right = 5;
+dir.shadow.camera.top = 5;
+dir.shadow.camera.bottom = -5;
+dir.shadow.bias = -0.0004;
+scene.add(dir);
+
+// 地面（接受阴影 + 拾取）
+const groundSize = N;
+const groundGeo = new THREE.PlaneGeometry(groundSize, groundSize);
+const groundMat = new THREE.MeshStandardMaterial({ color: 0xfff3d6, roughness: 0.95 });
+const ground = new THREE.Mesh(groundGeo, groundMat);
+ground.rotation.x = -Math.PI / 2;
+ground.position.y = 0;
+ground.receiveShadow = true;
+ground.userData.isGround = true;
+scene.add(ground);
+
+// 网格线（与方块中心对齐：每格 1 单位，共 N 格）
+const grid = new THREE.GridHelper(N, N, 0xf5b88f, 0xffd9b0);
+grid.position.y = 0.001;
+grid.material.opacity = 0.9;
+grid.material.transparent = true;
+scene.add(grid);
+
+// 四周边框，让 4×4 区域更醒目
+const edgePts = [];
+const h = 0.002;
+const lim = N / 2;
+edgePts.push(-lim, h, -lim,  lim, h, -lim);
+edgePts.push( lim, h, -lim,  lim, h,  lim);
+edgePts.push( lim, h,  lim, -lim, h,  lim);
+edgePts.push(-lim, h,  lim, -lim, h, -lim);
+const borderGeo = new THREE.BufferGeometry();
+borderGeo.setAttribute('position', new THREE.Float32BufferAttribute(edgePts, 3));
+scene.add(new THREE.LineSegments(borderGeo, new THREE.LineBasicMaterial({ color: 0xe85420 })));
+
+// 方块组
+const blockGroup = new THREE.Group();
+scene.add(blockGroup);
+
+// 视线方向箭头（当前选中的视图方向）
+const dirArrow = new THREE.ArrowHelper(
+  new THREE.Vector3(0, 0, -1),
+  new THREE.Vector3(0, 1.5, lim + 0.9),
+  1.1, 0x4dabf7, 0.42, 0.26
+);
+dirArrow.line.material.lineWidth = 3;
+scene.add(dirArrow);
+
+/* =======================================================================
+   图形几何（共享）
+   ======================================================================= */
+const SHAPE_GEOMETRY = {
+  cube: new THREE.BoxGeometry(0.94, 0.94, 0.94),
+  cylinder: new THREE.CylinderGeometry(0.42, 0.42, 0.9, 28),
+  sphere: new THREE.SphereGeometry(0.46, 28, 20),
+  cone: new THREE.ConeGeometry(0.45, 0.95, 28),
+};
+const SHAPE_EDGE_GEOMETRY = Object.fromEntries(
+  Object.entries(SHAPE_GEOMETRY).map(([k, geo]) => [k, new THREE.EdgesGeometry(geo)])
+);
+
+function entriesOf(store = blocks) {
+  if (store instanceof Map) return [...store.entries()].map(([key, shape]) => ({ key, shape }));
+  if (store instanceof Set) return [...store].map(key => ({ key, shape: 'cube' }));
+  return [];
+}
+
+function worldPos(x, y, z) {
+  return [x - (N - 1) / 2, y + 0.5, z - (N - 1) / 2];
+}
+
+function makeBlock(x, y, z, shape = 'cube') {
+  const color = colorForHeight(y);
+  const mat = new THREE.MeshLambertMaterial({ color });
+  const mesh = new THREE.Mesh(SHAPE_GEOMETRY[shape] || SHAPE_GEOMETRY.cube, mat);
+  const [wx, wy, wz] = worldPos(x, y, z);
+  mesh.position.set(wx, wy, wz);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  mesh.userData = { x, y, z, key: `${x},${y},${z}`, shape };
+  // 黑色描边，让每块积木清晰可分
+  const edges = new THREE.LineSegments(
+    SHAPE_EDGE_GEOMETRY[shape] || SHAPE_EDGE_GEOMETRY.cube,
+    new THREE.LineBasicMaterial({ color: 0x3a2a1a, transparent: true, opacity: 0.55 })
+  );
+  mesh.add(edges);
+  return mesh;
+}
+
+/* =======================================================================
+   方块增删 / 历史
+   ======================================================================= */
+function addBlock(x, y, z, { shape = currentShape, anim = true, delay = 0, record = true } = {}) {
+  const key = `${x},${y},${z}`;
+  if (blocks.has(key)) return false;
+  if (y < 0 || y >= MAXH || x < 0 || x >= N || z < 0 || z >= N) return false;
+  blocks.set(key, shape);
+  const m = makeBlock(x, y, z, shape);
+  blockGroup.add(m);
+  if (anim) {
+    m.scale.setScalar(0.01);
+    animating.push({ mesh: m, start: performance.now() + delay });
+    if (delay === 0) playPop();
+  }
+  if (record) history.push({ op: 'add', x, y, z, shape });
+  updateAll();
+  return true;
+}
+
+function removeBlock(x, y, z, { record = true } = {}) {
+  const key = `${x},${y},${z}`;
+  if (!blocks.has(key)) return false;
+  const shape = blocks.get(key) || 'cube';
+  blocks.delete(key);
+  for (let i = blockGroup.children.length - 1; i >= 0; i--) {
+    const m = blockGroup.children[i];
+    if (m.userData.key === key) {
+      blockGroup.remove(m);
+      m.material.dispose();
+      m.children.forEach(c => c.material && c.material.dispose());
+      break;
+    }
+  }
+  if (record) { history.push({ op: 'remove', x, y, z, shape }); playClick(); }
+  updateAll();
+  return true;
+}
+
+function columnTopY(x, z) {
+  let y = 0;
+  while (blocks.has(`${x},${y},${z}`)) y++;
+  return y; // 下一个可放的高度
+}
+
+function addToColumn(x, z) {
+  const y = columnTopY(x, z);
+  if (y >= MAXH) { flash('这一列已经最高啦！', 'no'); wiggleColumn(x, z); return; }
+  addBlock(x, y, z, { shape: mode === 'challenge' ? 'cube' : currentShape });
+}
+
+function removeTopOfColumn(x, z) {
+  let y = MAXH - 1;
+  while (y >= 0 && !blocks.has(`${x},${y},${z}`)) y--;
+  if (y < 0) return;
+  removeBlock(x, y, z);
+}
+
+function clearBlocks() {
+  while (blockGroup.children.length) {
+    const m = blockGroup.children[0];
+    blockGroup.remove(m);
+    m.material.dispose();
+    m.children.forEach(c => c.material && c.material.dispose());
+  }
+  blocks.clear();
+  animating.length = 0;
+  history = [];
+  updateAll();
+}
+
+function undo() {
+  if (!history.length) { flash('没有可撤销的啦', 'info'); return; }
+  const last = history.pop();
+  if (last.op === 'add') removeBlock(last.x, last.y, last.z, { record: false });
+  else addBlock(last.x, last.y, last.z, { shape: last.shape || 'cube', anim: false, record: false });
+  flash('已撤销一步', 'info');
+}
+
+// 列高亮摆动反馈（超限提示）
+function wiggleColumn(x, z) {
+  for (const m of blockGroup.children) {
+    if (m.userData.x === x && m.userData.z === z) {
+      const orig = m.position.x;
+      let t = 0;
+      const id = setInterval(() => {
+        t += 60;
+        m.position.x = orig + Math.sin(t / 40) * 0.08;
+        if (t > 240) { m.position.x = orig; clearInterval(id); }
+      }, 30);
+    }
+  }
+}
+
+/* =======================================================================
+   拾取（点击放置/擦除）—— 与 OrbitControls 共存
+   ======================================================================= */
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+let downX = 0, downY = 0, downT = 0, dragged = false;
+
+renderer.domElement.addEventListener('pointerdown', (e) => {
+  downX = e.clientX; downY = e.clientY; downT = performance.now(); dragged = false;
+});
+renderer.domElement.addEventListener('pointermove', (e) => {
+  if (Math.hypot(e.clientX - downX, e.clientY - downY) > 6) dragged = true;
+});
+renderer.domElement.addEventListener('pointerup', (e) => {
+  if (dragged) return;
+  if (performance.now() - downT > 400) return; // 长按不当作点击
+  handleTap(e);
+});
+
+function handleTap(e) {
+  const rect = renderer.domElement.getBoundingClientRect();
+  pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+  raycaster.setFromCamera(pointer, camera);
+  const objs = [ground, ...blockGroup.children];
+  const hits = raycaster.intersectObjects(objs, false);
+  if (!hits.length) return;
+  const hit = hits[0];
+  let gx, gz;
+  if (hit.object === ground) {
+    gx = Math.round(hit.point.x + (N - 1) / 2);
+    gz = Math.round(hit.point.z + (N - 1) / 2);
+  } else {
+    gx = hit.object.userData.x;
+    gz = hit.object.userData.z;
+  }
+  if (gx < 0 || gx >= N || gz < 0 || gz >= N) return;
+  if (mode === 'challenge' && challengeSolved) return; // 已答对就锁定
+  if (eraseMode) removeTopOfColumn(gx, gz);
+  else addToColumn(gx, gz);
+}
+
+/* =======================================================================
+   投影计算（务必正确）
+   - 正视图：每列 x 的最高 y+1
+   - 俯视图：每 (x,z) 是否有方块 + 最高高度
+   - 左/右视图：每列 z 的最高 y+1（左右列顺序镜像）
+   ======================================================================= */
+function computeFront(set = blocks) {
+  const h = new Array(N).fill(0);
+  for (const { key: k } of entriesOf(set)) {
+    const [x, y] = k.split(',').map(Number);
+    if (y + 1 > h[x]) h[x] = y + 1;
+  }
+  return h;
+}
+function computeSideByZ(set = blocks) { // 每列 z 的最高 y+1
+  const h = new Array(N).fill(0);
+  for (const { key: k } of entriesOf(set)) {
+    const [, y, z] = k.split(',').map(Number);
+    if (y + 1 > h[z]) h[z] = y + 1;
+  }
+  return h;
+}
+function computeTop(set = blocks) {
+  const g = Array.from({ length: N }, () =>
+    Array.from({ length: N }, () => ({ occupied: false, maxH: 0 }))
+  );
+  for (const { key: k } of entriesOf(set)) {
+    const [x, y, z] = k.split(',').map(Number);
+    g[x][z].occupied = true;
+    if (y + 1 > g[x][z].maxH) g[x][z].maxH = y + 1;
+  }
+  return g;
+}
+
+/* =======================================================================
+   2D 投影绘制（SVG）
+   ======================================================================= */
+const SVGNS = 'http://www.w3.org/2000/svg';
+function svgEl(name, attrs = {}) {
+  const e = document.createElementNS(SVGNS, name);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  return e;
+}
+
+// 绘制：列状图（正/左/右视图）或顶视网格
+function drawProjection(svg, { type, cols, grid }) {
+  svg.innerHTML = '';
+  const W = PAD * 2 + N * CELL;
+  const H = PAD * 2 + N * CELL + 14;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+
+  // 背板淡格
+  for (let c = 0; c < N; c++) {
+    for (let r = 0; r < N; r++) {
+      const cx = PAD + c * CELL;
+      const cy = PAD + r * CELL;
+      let fill = null, stroke = '#dccba8', sw = 1, dash = '3 3', label = '', labelColor = '#fff';
+      if (type === 'top') {
+        const cell = grid[c][r];
+        if (cell.occupied) {
+          fill = colorForHeight(cell.maxH - 1);
+          stroke = '#3a2a1a'; sw = 1.5; dash = 'none';
+          label = String(cell.maxH); labelColor = '#2d3436';
+        } else { fill = '#f3eee2'; }
+      } else {
+        // 列状图：行 r=0 在顶部对应 y=N-1；r=N-1 在底部对应 y=0
+        const y = N - 1 - r;
+        if (y < cols[c]) {
+          fill = colorForHeight(y);
+          stroke = '#3a2a1a'; sw = 1.5; dash = 'none';
+        } else { fill = '#f3eee2'; }
+      }
+      const rect = svgEl('rect', {
+        x: cx + 1.5, y: cy + 1.5, width: CELL - 3, height: CELL - 3,
+        fill, stroke, 'stroke-width': sw,
+      });
+      if (dash !== 'none') rect.setAttribute('stroke-dasharray', dash);
+      svg.appendChild(rect);
+      if (label) {
+        const t = svgEl('text', {
+          x: cx + CELL / 2, y: cy + CELL / 2 + 7,
+          'text-anchor': 'middle', 'font-size': CELL * 0.42,
+          'font-weight': '800', fill: labelColor,
+          style: 'paint-order: stroke; stroke:#fff; stroke-width:3px;'
+        });
+        t.textContent = label;
+        svg.appendChild(t);
+      }
+    }
+  }
+  // 底部列号
+  for (let c = 0; c < N; c++) {
+    const t = svgEl('text', {
+      x: PAD + c * CELL + CELL / 2, y: PAD + N * CELL + 12,
+      'text-anchor': 'middle', 'font-size': 11, fill: '#8a949c', 'font-weight': '700'
+    });
+    t.textContent = (c + 1);
+    svg.appendChild(t);
+  }
+}
+
+function cellOrigin(c, r) {
+  return [PAD + c * CELL, PAD + r * CELL];
+}
+
+function drawShapeInCell(svg, shape, c, r, color, topView = false, label = '') {
+  const [x0, y0] = cellOrigin(c, r);
+  const dark = '#3a2a1a';
+  const add = (e) => svg.appendChild(e);
+  if (shape === 'cube') {
+    add(svgEl('rect', { x: x0 + 5, y: y0 + 5, width: CELL - 10, height: CELL - 10, fill: color, stroke: dark, 'stroke-width': 1.6 }));
+  } else if (shape === 'cylinder') {
+    if (topView) {
+      add(svgEl('circle', { cx: x0 + CELL / 2, cy: y0 + CELL / 2, r: CELL * 0.31, fill: color, stroke: dark, 'stroke-width': 1.6 }));
+    } else {
+      add(svgEl('rect', { x: x0 + 8, y: y0 + 5, width: CELL - 16, height: CELL - 10, fill: color, stroke: dark, 'stroke-width': 1.6 }));
+    }
+  } else if (shape === 'sphere') {
+    add(svgEl('circle', { cx: x0 + CELL / 2, cy: y0 + CELL / 2, r: CELL * 0.31, fill: color, stroke: dark, 'stroke-width': 1.6 }));
+  } else if (shape === 'cone') {
+    if (topView) {
+      add(svgEl('circle', { cx: x0 + CELL / 2, cy: y0 + CELL / 2, r: CELL * 0.31, fill: color, stroke: dark, 'stroke-width': 1.6 }));
+      add(svgEl('circle', { cx: x0 + CELL / 2, cy: y0 + CELL / 2, r: 3, fill: dark }));
+    } else {
+      const pts = `${x0 + CELL / 2},${y0 + 7} ${x0 + 8},${y0 + CELL - 6} ${x0 + CELL - 8},${y0 + CELL - 6}`;
+      add(svgEl('polygon', { points: pts, fill: color, stroke: dark, 'stroke-width': 1.6, 'stroke-linejoin': 'round' }));
+    }
+  }
+  if (label) {
+    const t = svgEl('text', {
+      x: x0 + CELL / 2, y: y0 + CELL / 2 + 7,
+      'text-anchor': 'middle', 'font-size': CELL * 0.42,
+      'font-weight': '800', fill: '#2d3436',
+      style: 'paint-order: stroke; stroke:#fff; stroke-width:3px;'
+    });
+    t.textContent = label;
+    add(t);
+  }
+}
+
+function drawShapeProjection(svg, view, store = blocks) {
+  svg.innerHTML = '';
+  const W = PAD * 2 + N * CELL;
+  const H = PAD * 2 + N * CELL + 14;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  // 背板淡格
+  for (let c = 0; c < N; c++) {
+    for (let r = 0; r < N; r++) {
+      const [x0, y0] = cellOrigin(c, r);
+      svg.appendChild(svgEl('rect', {
+        x: x0 + 1.5, y: y0 + 1.5, width: CELL - 3, height: CELL - 3, rx: 6,
+        fill: '#f3eee2', stroke: '#dccba8', 'stroke-width': 1, 'stroke-dasharray': '3 3'
+      }));
+    }
+  }
+  if (view === 'top') {
+    const topMap = new Map();
+    for (const { key, shape } of entriesOf(store)) {
+      const [x, y, z] = key.split(',').map(Number);
+      const k = `${x},${z}`;
+      const prev = topMap.get(k);
+      if (!prev || y > prev.y) topMap.set(k, { x, y, z, shape });
+    }
+    for (const { x, y, z, shape } of topMap.values()) {
+      drawShapeInCell(svg, shape, x, z, colorForHeight(y), true, String(y + 1));
+    }
+  } else {
+    const items = entriesOf(store).map(({ key, shape }) => {
+      const [x, y, z] = key.split(',').map(Number);
+      return { x, y, z, shape };
+    });
+    items.sort((a, b) => {
+      if (view === 'front') return a.z - b.z || a.y - b.y;     // 远(小z)先画
+      if (view === 'left') return b.x - a.x || a.y - b.y;      // 远(大x)先画
+      return a.x - b.x || a.y - b.y;                           // right: 远(小x)先画
+    });
+    for (const it of items) {
+      const c = view === 'front' ? it.x : (view === 'left' ? it.z : (N - 1 - it.z));
+      const r = N - 1 - it.y;
+      drawShapeInCell(svg, it.shape, c, r, colorForHeight(it.y), false, '');
+    }
+  }
+  // 底部列号
+  for (let c = 0; c < N; c++) {
+    const t = svgEl('text', {
+      x: PAD + c * CELL + CELL / 2, y: PAD + N * CELL + 12,
+      'text-anchor': 'middle', 'font-size': 11, fill: '#8a949c', 'font-weight': '700'
+    });
+    t.textContent = (c + 1);
+    svg.appendChild(t);
+  }
+}
+
+function getViewData(view, set = blocks) {
+  if (view === 'front') return { type: 'cols', cols: computeFront(set) };
+  if (view === 'left')  return { type: 'cols', cols: computeSideByZ(set) };
+  if (view === 'right') {
+    const h = computeSideByZ(set);
+    // 右视图：col i ↔ z=N-1-i，故把高度数组反过来排
+    return { type: 'cols', cols: h.slice().reverse() };
+  }
+  return { type: 'top', grid: computeTop(set) };
+}
+
+const VIEW_LABELS = {
+  front: '👀 从前面看',
+  left: '👀 从左边看',
+  right: '👀 从右边看',
+  top: '👀 从上面看（下边是“前”）',
+};
+
+function renderProjection() {
+  if (mode === 'challenge') {
+    const data = getViewData(currentView);
+    drawProjection(document.getElementById('proj'), data);
+  } else {
+    drawShapeProjection(document.getElementById('proj'), currentView, blocks);
+  }
+  document.getElementById('projLabel').textContent = VIEW_LABELS[currentView];
+  document.getElementById('viewTag').textContent =
+    currentView === 'front' ? '正视图' :
+    currentView === 'left' ? '左视图' :
+    currentView === 'right' ? '右视图' : '俯视图';
+  const tag = document.getElementById('viewTag');
+  tag.classList.add('pop');
+  setTimeout(() => tag.classList.remove('pop'), 200);
+  updateDirArrow(currentView);
+}
+
+/* =======================================================================
+   3D 视线箭头方向
+   ======================================================================= */
+function updateDirArrow(view) {
+  const off = N / 2 + 0.9;
+  switch (view) {
+    case 'front':
+      dirArrow.position.set(0, 1.4, off); dirArrow.setDirection(new THREE.Vector3(0, 0, -1)); break;
+    case 'top':
+      dirArrow.position.set(0, N + 1.2, 0.01); dirArrow.setDirection(new THREE.Vector3(0, -1, 0)); break;
+    case 'left':
+      dirArrow.position.set(-off, 1.4, 0); dirArrow.setDirection(new THREE.Vector3(1, 0, 0)); break;
+    case 'right':
+      dirArrow.position.set(off, 1.4, 0); dirArrow.setDirection(new THREE.Vector3(-1, 0, 0)); break;
+  }
+}
+
+/* =======================================================================
+   相机对齐到当前视图（"站到这一面看"）
+   ======================================================================= */
+const CAM_TARGETS = {
+  front: { pos: new THREE.Vector3(0, 1.5, 7.6), tgt: new THREE.Vector3(0, 1, 0) },
+  top:   { pos: new THREE.Vector3(0, 9, 0.42),  tgt: new THREE.Vector3(0, 0, 0) },
+  left:  { pos: new THREE.Vector3(-7.6, 1.5, 0),tgt: new THREE.Vector3(0, 1, 0) },
+  right: { pos: new THREE.Vector3(7.6, 1.5, 0), tgt: new THREE.Vector3(0, 1, 0) },
+};
+let camTween = null;
+function alignCameraToCurrentView() {
+  const t = CAM_TARGETS[currentView];
+  controls.enabled = false;
+  const sp = camera.position.clone();
+  const st = controls.target.clone();
+  const start = performance.now();
+  const dur = 700;
+  camTween = (now) => {
+    const k = Math.min(1, (now - start) / dur);
+    const e = 1 - Math.pow(1 - k, 3);
+    camera.position.lerpVectors(sp, t.pos, e);
+    controls.target.lerpVectors(st, t.tgt, e);
+    if (k >= 1) { controls.enabled = true; camTween = null; }
+  };
+  flash('现在你正站在「' + viewCN(currentView) + '」看立体～', 'info');
+}
+const viewCN = (v) => ({ front: '前面', left: '左边', right: '右边', top: '上面' })[v];
+
+/* =======================================================================
+   模式：随机生成（连通、不悬空）
+   ======================================================================= */
+function generateRandomSet(K) {
+  const s = new Set();
+  const has = (x, y, z) => s.has(`${x},${y},${z}`);
+  const sx = Math.floor(Math.random() * N);
+  const sz = Math.floor(Math.random() * N);
+  s.add(`${sx},0,${sz}`);
+  const dirs = [[1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], [0, 1, 0]];
+  let count = 1, tries = 0;
+  while (count < K && tries < 400) {
+    tries++;
+    const arr = [...s].map(k => k.split(',').map(Number));
+    const [bx, by, bz] = arr[Math.floor(Math.random() * arr.length)];
+    const d = dirs[Math.floor(Math.random() * dirs.length)];
+    const nx = bx + d[0], ny = by + d[1], nz = bz + d[2];
+    if (nx < 0 || nx >= N || nz < 0 || nz >= N || ny < 0 || ny >= MAXH) continue;
+    if (has(nx, ny, nz)) continue;
+    const supported = (ny === 0) || has(nx, ny - 1, nz);
+    if (!supported) continue;
+    s.add(`${nx},${ny},${nz}`);
+    count++;
+  }
+  return s;
+}
+
+function runRandom() {
+  clearBlocks();
+  challengeSolved = false;
+  const K = 3 + Math.floor(Math.random() * 6); // 3..8
+  const s = generateRandomSet(K);
+  let i = 0;
+  for (const k of s) {
+    const [x, y, z] = k.split(',').map(Number);
+    const shape = RANDOM_SHAPES[Math.floor(Math.random() * RANDOM_SHAPES.length)];
+    addBlock(x, y, z, { shape, anim: true, delay: i * 55, record: false });
+    i++;
+  }
+  flash('🎲 随机生成了 ' + s.size + ' 个图形，看看三视图吧！', 'info');
+}
+
+/* =======================================================================
+   模式：挑战题
+   ======================================================================= */
+let challengeSolved = false;
+function newChallenge() {
+  clearBlocks();
+  challengeSolved = false;
+  const K = 3 + Math.floor(Math.random() * 3); // 3..5
+  const s = generateRandomSet(K);
+  const front = computeFront(s);
+  const topGrid = computeTop(s);
+  const topOcc = Array.from({ length: N }, () => new Array(N).fill(false));
+  const topMaxH = Array.from({ length: N }, () => new Array(N).fill(0));
+  for (let x = 0; x < N; x++) for (let z = 0; z < N; z++) {
+    topOcc[x][z] = topGrid[x][z].occupied;
+    topMaxH[x][z] = topGrid[x][z].maxH;
+  }
+  challengeTarget = { front, topOcc, topMaxH, count: s.size };
+  drawTargetFront();
+  drawTargetTop();
+  document.getElementById('challengeCard').hidden = false;
+  flash('🎯 新题目！照着下面的目标搭一搭，再点「检查」', 'info');
+}
+
+function drawTargetFront() {
+  drawProjection(document.getElementById('targetFront'), { type: 'cols', cols: challengeTarget.front });
+}
+function drawTargetTop() {
+  const grid = Array.from({ length: N }, (_, x) =>
+    Array.from({ length: N }, (_, z) => ({
+      occupied: challengeTarget.topOcc[x][z],
+      maxH: challengeTarget.topMaxH[x][z],
+    }))
+  );
+  drawProjection(document.getElementById('targetTop'), { type: 'top', grid });
+}
+
+function checkChallenge() {
+  if (!challengeTarget) return;
+  if (blocks.size === 0) { flash('先搭点积木再检查呀～', 'no'); return; }
+  const f = computeFront(blocks);
+  const topGrid = computeTop(blocks);
+  // 1) 正视图
+  let frontBad = -1;
+  for (let i = 0; i < N; i++) {
+    if (f[i] !== challengeTarget.front[i]) { frontBad = i; break; }
+  }
+  // 2) 俯视图占用
+  let topBad = null;
+  outer:
+  for (let x = 0; x < N; x++) for (let z = 0; z < N; z++) {
+    if (topGrid[x][z].occupied !== challengeTarget.topOcc[x][z]) { topBad = [x, z]; break outer; }
+  }
+  if (frontBad === -1 && topBad === null) {
+    challengeSolved = true;
+    celebrate();
+  } else {
+    const reasons = [];
+    if (frontBad !== -1) reasons.push(`正视图第 ${frontBad + 1} 列的高度不对`);
+    if (topBad) reasons.push(`俯视图在 第${topBad[0] + 1}列/第${topBad[1] + 1}行 位置不一样`);
+    flash('❌ 还差一点：' + reasons.join('，') + '。改一改再试！', 'no');
+    wiggleFeedback();
+  }
+}
+
+/* =======================================================================
+   庆祝 + 彩带
+   ======================================================================= */
+function celebrate() {
+  flash('🎉 太棒了！完全正确！⭐⭐⭐', 'ok');
+  playSuccess();
+  spawnConfetti();
+  // 全部方块开心地跳一下
+  for (let i = 0; i < blockGroup.children.length; i++) {
+    const m = blockGroup.children[i];
+    animating.push({ mesh: m, start: performance.now() + i * 40, celebrate: true });
+  }
+}
+
+const CONFETTI_COLORS = ['#ff6b35', '#ffd43b', '#51cf66', '#4dabf7', '#9775fa', '#ff8787'];
+function spawnConfetti() {
+  const box = document.getElementById('confetti');
+  box.innerHTML = '';
+  const n = 36;
+  for (let i = 0; i < n; i++) {
+    const p = document.createElement('div');
+    p.className = 'confetti-piece';
+    p.style.background = CONFETTI_COLORS[i % CONFETTI_COLORS.length];
+    p.style.left = (Math.random() * 100) + 'vw';
+    const fall = 1400 + Math.random() * 800;
+    const drift = (Math.random() - 0.5) * 160;
+    const rot = (Math.random() * 720 - 360);
+    p.style.transform = 'translateY(-20px) rotate(0)';
+    box.appendChild(p);
+    p.animate(
+      [
+        { transform: 'translateY(-20px) rotate(0deg)', opacity: 1 },
+        { transform: `translate(${drift}px, 100vh) rotate(${rot}deg)`, opacity: 0.9 },
+      ],
+      { duration: fall, easing: 'cubic-bezier(.2,.6,.4,1)', fill: 'forwards' }
+    );
+  }
+  setTimeout(() => { box.innerHTML = ''; }, 2600);
+}
+
+/* =======================================================================
+   反馈条
+   ======================================================================= */
+let flashTimer = null;
+function flash(msg, type = 'info') {
+  const el = document.getElementById('feedback');
+  el.textContent = msg;
+  el.className = 'feedback ' + type + ' pop';
+  clearTimeout(flashTimer);
+  flashTimer = setTimeout(() => el.classList.remove('pop'), 180);
+}
+function wiggleFeedback() {
+  const el = document.getElementById('feedback');
+  el.classList.add('pop');
+  setTimeout(() => el.classList.remove('pop'), 200);
+}
+
+/* =======================================================================
+   音效（Web Audio，首次交互后生效）
+   ======================================================================= */
+let audioCtx = null;
+function ensureAudio() {
+  if (!audioCtx) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+    catch (e) { audioCtx = null; }
+  }
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+}
+function beep(freq, dur, type = 'sine', vol = 0.07) {
+  if (!audioCtx) return;
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.type = type; o.frequency.value = freq;
+  o.connect(g); g.connect(audioCtx.destination);
+  const t = audioCtx.currentTime;
+  g.gain.setValueAtTime(vol, t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.start(t); o.stop(t + dur + 0.02);
+}
+function playPop() { ensureAudio(); beep(680, 0.1, 'triangle', 0.07); }
+function playClick() { ensureAudio(); beep(320, 0.09, 'sine', 0.06); }
+function playSuccess() {
+  ensureAudio();
+  beep(523, 0.12); setTimeout(() => beep(659, 0.12), 110); setTimeout(() => beep(784, 0.2), 220);
+}
+
+/* =======================================================================
+   UI 装配
+   ======================================================================= */
+function updateCountPill() {
+  document.getElementById('countPill').textContent = blocks.size + ' 个';
+}
+
+function updateAll() {
+  updateCountPill();
+  renderProjection();
+  if (mode === 'challenge') {
+    // 实时给一点提示但不剧透
+  }
+}
+
+function renderActionRow() {
+  const row = document.getElementById('actionRow');
+  row.innerHTML = '';
+  const mk = (label, cls, onclick, extra = {}) => {
+    const b = document.createElement('button');
+    b.className = 'btn ' + cls;
+    b.textContent = label;
+    b.onclick = () => { ensureAudio(); onclick(b); };
+    for (const k in extra) b.classList.add(extra[k]);
+    return b;
+  };
+  // 橡皮擦切换（所有模式都有）
+  const eraseBtn = mk(eraseMode ? '🧽 橡皮擦：开' : '🧽 橡皮擦：关', 'ghost toggle' + (eraseMode ? ' on' : ''),
+    (b) => {
+      eraseMode = !eraseMode;
+      b.textContent = eraseMode ? '🧽 橡皮擦：开' : '🧽 橡皮擦：关';
+      b.classList.toggle('on', eraseMode);
+      document.getElementById('hint').textContent = eraseMode
+        ? '🧽 点一列，拿走最上面那块 · 🤚 拖动转一转'
+        : hintForMode();
+    });
+
+  if (mode === 'build') {
+    row.appendChild(eraseBtn);
+    row.appendChild(mk('↩️ 撤销', 'accent', () => undo()));
+    row.appendChild(mk('🗑️ 清空', 'ghost', () => { clearBlocks(); flash('已清空，重新搭吧！', 'info'); }));
+  } else if (mode === 'random') {
+    row.appendChild(mk('🎲 换一堆', 'accent', () => runRandom()));
+    row.appendChild(eraseBtn);
+  } else if (mode === 'challenge') {
+    row.appendChild(mk('✓ 检查', 'good', () => checkChallenge()));
+    row.appendChild(mk('🔄 换一题', 'accent', () => newChallenge()));
+    row.appendChild(eraseBtn);
+  }
+}
+
+function hintForMode() {
+  if (mode === 'build') return '👆 点格子放积木 · 🤚 拖动转一转';
+  if (mode === 'random') return '👀 转一转、看一看，再对照三视图';
+  if (mode === 'challenge') return '🎯 照目标搭，点「检查」看对错';
+  return '';
+}
+
+function setMode(m) {
+  mode = m;
+  eraseMode = false;
+  challengeSolved = false;
+  clearBlocks();
+  document.getElementById('shapeSeg').hidden = (m !== 'build');
+  document.getElementById('challengeCard').hidden = (m !== 'challenge');
+  // 按钮 active
+  document.querySelectorAll('#modeSeg button').forEach(b =>
+    b.classList.toggle('active', b.dataset.mode === m));
+  document.getElementById('hint').textContent = hintForMode();
+  renderActionRow();
+  if (m === 'random') runRandom();
+  else if (m === 'challenge') newChallenge();
+  else flash('🧱 想怎么搭就怎么搭！点格子放积木～', 'info');
+}
+
+function setView(v) {
+  currentView = v;
+  document.querySelectorAll('#viewSeg button').forEach(b =>
+    b.classList.toggle('active', b.dataset.view === v));
+  renderProjection();
+}
+
+// 绑定
+document.querySelectorAll('#modeSeg button').forEach(b =>
+  b.addEventListener('click', () => setMode(b.dataset.mode)));
+document.querySelectorAll('#viewSeg button').forEach(b =>
+  b.addEventListener('click', () => setView(b.dataset.view)));
+document.querySelectorAll('#shapeSeg button').forEach(b =>
+  b.addEventListener('click', () => {
+    currentShape = b.dataset.shape;
+    document.querySelectorAll('#shapeSeg button').forEach(x => x.classList.toggle('active', x === b));
+    flash(`已选${SHAPES[currentShape].icon}${SHAPES[currentShape].label}，点格子放上去吧！`, 'info');
+  }));
+document.getElementById('alignBtn').addEventListener('click', () => { ensureAudio(); alignCameraToCurrentView(); });
+
+/* =======================================================================
+   初始示例（让一打开就有内容可看）
+   ======================================================================= */
+function loadInitialDemo() {
+  // 一个 3 个图形的小阶梯：方块 + 圆柱 + 球
+  addBlock(1, 0, 1, { shape: 'cube', anim: true, delay: 0, record: false });
+  addBlock(1, 1, 1, { shape: 'cylinder', anim: true, delay: 80, record: false });
+  addBlock(2, 0, 1, { shape: 'sphere', anim: true, delay: 160, record: false });
+}
+
+/* =======================================================================
+   渲染循环 + 自适应
+   ======================================================================= */
+function easeOutBack(t) {
+  const c1 = 1.70158, c3 = c1 + 1;
+  return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+}
+
+function animate(now) {
+  // 弹跳动画
+  for (let i = animating.length - 1; i >= 0; i--) {
+    const a = animating[i];
+    const elapsed = now - a.start;
+    if (elapsed < 0) continue;
+    if (a.celebrate) {
+      const t = Math.min(1, elapsed / 500);
+      const s = 1 + Math.sin(t * Math.PI) * 0.18;
+      a.mesh.scale.setScalar(s);
+      if (t >= 1) { a.mesh.scale.setScalar(1); animating.splice(i, 1); }
+    } else {
+      const t = Math.min(1, elapsed / 260);
+      const s = t >= 1 ? 1 : easeOutBack(t);
+      a.mesh.scale.setScalar(Math.max(0.01, s));
+      if (t >= 1) { a.mesh.scale.setScalar(1); animating.splice(i, 1); }
+    }
+  }
+  if (camTween) camTween(now);
+  controls.update();
+  renderer.render(scene, camera);
+  requestAnimationFrame(animate);
+}
+
+function resize() {
+  const w = stage.clientWidth;
+  const h = stage.clientHeight;
+  if (w === 0 || h === 0) return;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+const ro = new ResizeObserver(resize);
+ro.observe(stage);
+window.addEventListener('resize', resize);
+resize();
+
+/* =======================================================================
+   启动
+   ======================================================================= */
+loading.style.display = 'none';
+renderActionRow();
+renderProjection();
+loadInitialDemo();
+flash('🧱 点格子放积木，拖动可以转着看！', 'info');
+requestAnimationFrame(animate);
+
+// 防止双击缩放
+document.addEventListener('gesturestart', e => e.preventDefault());
+</script>
+</body>
+</html>
