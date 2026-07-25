@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#fef6ee">
+<meta name="description" content="三年级上册 · 四则混合运算顺序小练习">
+<title>混合运算顺序 · 三年级挑战</title>
+<style>
+  /* ============ 基础重置 / 主题变量 ============ */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  * { user-select: none; -webkit-user-select: none; }
+  html { -webkit-text-size-adjust: 100%; }
+
+  :root{
+    --ink:#3a2f4d;          /* 主文字色 */
+    --ink-soft:#7a6c8f;     /* 次要文字 */
+    --line:#ece3f5;         /* 分割/描边 */
+    --card:#ffffff;
+    --primary:#ff6b3d;      /* 主操作色 珊瑚橙 */
+    --primary-d:#e0512a;
+    --add:#2ec27e;  --add-d:#1ea867;   /* 加法 绿 */
+    --sub:#3a9bff;  --sub-d:#1f7fe0;   /* 减法 蓝 */
+    --mul:#ff9f1c;  --mul-d:#e5850a;   /* 乘法 橙 */
+    --div:#a55eea;  --div-d:#8a3fd6;   /* 除法 紫 */
+    --ok:#1ea867;
+    --no:#e5484d;
+    --shadow-soft:0 10px 30px rgba(120, 90, 150, .12), 0 3px 8px rgba(120, 90, 150, .06);
+  }
+
+  body{
+    font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans CJK SC",-apple-system,"Helvetica Neue",sans-serif;
+    color:var(--ink);
+    min-height:100vh; min-height:100dvh;
+    display:flex; justify-content:center;
+    padding:max(14px, env(safe-area-inset-top)) 12px max(14px, env(safe-area-inset-bottom));
+    background:
+      radial-gradient(circle at 12% 8%, #d9ecff 0%, rgba(217,236,255,0) 42%),
+      radial-gradient(circle at 88% 92%, #ffe0ec 0%, rgba(255,224,236,0) 42%),
+      linear-gradient(180deg,#fefcf8 0%, #fdf3ea 100%);
+    background-attachment:fixed;
+  }
+
+  .app{
+    width:100%; max-width:520px;
+    display:flex; flex-direction:column;
+  }
+
+  /* ============ 屏幕切换 ============ */
+  .screen{ animation:fadeInUp .45s cubic-bezier(.2,.8,.25,1) both; }
+  .screen[hidden]{ display:none; }
+  @keyframes fadeInUp{ from{opacity:0; transform:translateY(14px);} to{opacity:1; transform:none;} }
+
+  /* ============ 通用大按钮 ============ */
+  .btn-go{
+    width:100%; border:none; border-radius:22px;
+    padding:18px 20px; font-size:clamp(19px,5.4vw,23px); font-weight:800;
+    color:#fff; letter-spacing:2px;
+    background:linear-gradient(180deg,#ff8156,var(--primary));
+    box-shadow:0 7px 0 var(--primary-d), 0 10px 18px rgba(224,81,42,.30);
+    transition:transform .08s, box-shadow .08s, opacity .2s;
+    touch-action:manipulation;
+  }
+  .btn-go:active{ transform:translateY(6px); box-shadow:0 1px 0 var(--primary-d), 0 3px 8px rgba(224,81,42,.25); }
+
+  /* ============ 开始页 ============ */
+  .start-screen{ text-align:center; padding:8px 4px 6px; }
+  .logo{ font-size:clamp(64px,22vw,96px); line-height:1; animation:bounceIn .9s cubic-bezier(.34,1.56,.64,1) both; filter:drop-shadow(0 8px 14px rgba(255,107,61,.3)); }
+  .start-screen h1{ font-size:clamp(26px,7.5vw,34px); font-weight:900; letter-spacing:3px; margin-top:6px; background:linear-gradient(90deg,#ff6b3d,#a55eea); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .start-screen .subtitle{ font-size:clamp(14px,4.2vw,17px); color:var(--ink-soft); margin-top:8px; letter-spacing:1px; }
+  .how{ display:flex; flex-direction:column; gap:10px; margin:22px 0 26px; }
+  .how-item{ background:var(--card); border-radius:16px; padding:13px 16px; font-size:clamp(14px,4vw,16px); font-weight:600; box-shadow:var(--shadow-soft); display:flex; align-items:center; gap:10px; }
+  .how-item .ic{ font-size:22px; }
+
+  /* ============ 游戏 HUD ============ */
+  .hud{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; }
+  .pill{ background:var(--card); border-radius:30px; padding:8px 16px; font-weight:700; font-size:clamp(14px,3.8vw,16px); box-shadow:var(--shadow-soft); display:inline-flex; align-items:center; gap:6px; }
+  .pill.progress b{ color:var(--primary-d); }
+  .pill.score{ background:linear-gradient(180deg,#3a2f4d,#2a2138); color:#ffe9c7; }
+  .pill.score b{ font-size:1.15em; color:#ffd166; display:inline-block; }
+  .pill.score b.bump{ animation:pop .45s cubic-bezier(.34,1.56,.64,1); }
+
+  /* ============ 表达式卡片 ============ */
+  .expr-card{ background:var(--card); border-radius:22px; padding:14px 16px 16px; box-shadow:var(--shadow-soft); margin-bottom:14px; }
+  .expr-card .tag{ font-size:13px; font-weight:700; color:var(--ink-soft); letter-spacing:2px; }
+  .expr{ font-size:clamp(26px,8vw,38px); font-weight:800; text-align:center; letter-spacing:2px; margin-top:4px; font-variant-numeric:tabular-nums; line-height:1.2; }
+  .expr .eq{ color:#cbb8de; font-weight:700; }
+  .expr-card.enter .expr{ animation:fadeInUp .4s ease both; }
+  .expr-card.shake{ animation:shake .42s ease; }
+
+  /* ============ 步骤 / 运算选择 ============ */
+  .step{ margin-bottom:13px; }
+  .step-head{ display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .badge{ background:linear-gradient(180deg,#fff0d6,#ffe0b0); color:#b5631a; font-size:13px; font-weight:800; letter-spacing:1px; padding:3px 11px; border-radius:20px; box-shadow:0 2px 0 #f3cd92; }
+  .step-head .q{ font-size:clamp(15px,4.2vw,17px); font-weight:700; color:var(--ink); }
+  .ops{ display:flex; gap:9px; }
+  .op{
+    flex:1 1 0; min-width:0; position:relative;
+    border:none; border-radius:18px; padding:10px 2px 9px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+    color:#fff; cursor:pointer;
+    box-shadow:0 5px 0 var(--d), 0 6px 12px rgba(0,0,0,.10);
+    transition:transform .08s, box-shadow .1s, outline-offset .1s;
+    touch-action:manipulation;
+  }
+  .op .sym{ font-size:clamp(20px,6.5vw,27px); line-height:1; }
+  .op .lbl{ font-size:clamp(12px,3.4vw,15px); font-weight:700; letter-spacing:1px; }
+  .op:active{ transform:translateY(4px); box-shadow:0 1px 0 var(--d), 0 2px 6px rgba(0,0,0,.10); }
+  .op-add{ background:linear-gradient(180deg,#3fd68d,var(--add)); --d:var(--add-d); }
+  .op-sub{ background:linear-gradient(180deg,#5cb0ff,var(--sub)); --d:var(--sub-d); }
+  .op-mul{ background:linear-gradient(180deg,#ffb44a,var(--mul)); --d:var(--mul-d); }
+  .op-div{ background:linear-gradient(180deg,#b974f0,var(--div)); --d:var(--div-d); }
+  .op.sel{ outline:4px solid var(--d); outline-offset:2px; transform:translateY(-2px); box-shadow:0 7px 0 var(--d), 0 8px 16px rgba(0,0,0,.16); }
+  .op.sel::after{ content:'✓'; position:absolute; top:-9px; right:-7px; width:26px; height:26px; border-radius:50%; background:#fff; color:var(--d); font-size:15px; font-weight:900; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(0,0,0,.25); animation:pop .3s cubic-bezier(.34,1.56,.64,1); }
+
+  /* ============ 结果显示 ============ */
+  .result-block{ margin-bottom:12px; }
+  .result-row{ display:flex; align-items:center; gap:12px; }
+  .result-row .lbl{ font-size:clamp(15px,4.2vw,17px); font-weight:800; color:var(--ink); white-space:nowrap; }
+  .result-display{ flex:1; min-height:60px; border-radius:16px; background:var(--card); border:3px dashed #d6c8e8; display:flex; align-items:center; justify-content:center; font-size:clamp(28px,9vw,38px); font-weight:900; color:var(--ink); font-variant-numeric:tabular-nums; box-shadow:inset 0 2px 6px rgba(120,90,150,.06); transition:border-color .2s, color .2s; }
+  .result-display.empty{ color:#c3b6d6; }
+  .result-display.fill{ border-style:solid; border-color:#c9b5e6; }
+
+  /* ============ 数字键盘 ============ */
+  .keypad{ display:grid; grid-template-columns:repeat(3,1fr); gap:9px; margin-bottom:12px; }
+  .key{
+    border:none; border-radius:16px; height:56px; cursor:pointer;
+    background:var(--card); color:var(--ink);
+    font-size:clamp(21px,6.2vw,26px); font-weight:800; font-variant-numeric:tabular-nums;
+    box-shadow:0 4px 0 #ddd0ea, 0 5px 9px rgba(0,0,0,.06);
+    transition:transform .07s, box-shadow .07s;
+    touch-action:manipulation;
+  }
+  .key:active{ transform:translateY(4px); box-shadow:0 0 0 #ddd0ea; }
+  .key-back{ background:#fff2e3; color:var(--primary-d); box-shadow:0 4px 0 #f4caa0; }
+  .key-clear{ background:#fde9ea; color:var(--no); box-shadow:0 4px 0 #f3bcc0; font-size:clamp(15px,4.2vw,18px); }
+
+  /* ============ 反馈条（保留高度，避免跳动） ============ */
+  .feedback{ min-height:60px; margin-bottom:10px; border-radius:16px; display:flex; align-items:center; justify-content:center; text-align:center; font-size:clamp(14px,4vw,17px); font-weight:700; line-height:1.35; padding:8px 12px; transition:background .2s, color .2s; }
+  .feedback:empty{ background:transparent; }
+  .feedback.ok{ background:#e3f7eb; color:#176843; }
+  .feedback.no{ background:#fdeced; color:#a3262b; }
+  .feedback.pop{ animation:pop .35s cubic-bezier(.34,1.56,.64,1); }
+  .feedback.shake{ animation:shake .42s ease; }
+  .feedback b{ font-weight:900; }
+  /* 答错反馈：把正确的运算与结果做成高对比“彩色贴纸”，避免和红色错误条混在一起 */
+  .feedback .hl{
+    display:inline-block; padding:2px 11px; margin:0 3px;
+    border-radius:11px; font-weight:900; color:#fff; letter-spacing:.5px;
+    box-shadow:0 2px 0 rgba(0,0,0,.18), 0 2px 5px rgba(0,0,0,.14);
+    white-space:nowrap;
+  }
+  .feedback .hl-add{ background:linear-gradient(180deg,#3fd68d,var(--add)); }
+  .feedback .hl-sub{ background:linear-gradient(180deg,#5cb0ff,var(--sub)); }
+  .feedback .hl-mul{ background:linear-gradient(180deg,#ffb44a,var(--mul)); }
+  .feedback .hl-div{ background:linear-gradient(180deg,#b974f0,var(--div)); }
+  .feedback .hl-num{
+    background:#241b33; color:#ffd95a; font-size:1.12em;
+    padding:2px 15px; font-variant-numeric:tabular-nums;
+  }
+
+  /* ============ 提交按钮 ============ */
+  .btn-submit{
+    width:100%; border:none; border-radius:22px; padding:17px;
+    font-size:clamp(18px,5vw,22px); font-weight:800; color:#fff; letter-spacing:2px; cursor:pointer;
+    background:linear-gradient(180deg,#ff8156,var(--primary));
+    box-shadow:0 7px 0 var(--primary-d), 0 10px 18px rgba(224,81,42,.28);
+    transition:transform .08s, box-shadow .08s, opacity .2s;
+    touch-action:manipulation;
+  }
+  .btn-submit:active{ transform:translateY(6px); box-shadow:0 1px 0 var(--primary-d); }
+  .btn-submit:disabled{ background:#cabed9; box-shadow:0 7px 0 #a99cb9; color:#fff; opacity:.65; cursor:default; }
+
+  /* 锁定（答完题后）时弱化控件 */
+  .game-area.locked .op, .game-area.locked .key{ pointer-events:none; }
+  .game-area.locked .op:not(.sel), .game-area.locked .key{ opacity:.55; }
+
+  /* ============ 结束页 ============ */
+  .end-screen{ text-align:center; padding:10px 4px; }
+  .end-emoji{ font-size:clamp(70px,24vw,104px); line-height:1; animation:bounceIn .8s cubic-bezier(.34,1.56,.64,1) both; }
+  .end-title{ font-size:clamp(22px,6.5vw,30px); font-weight:900; letter-spacing:2px; margin-top:6px; color:var(--ink); }
+  .stars{ font-size:clamp(34px,11vw,52px); margin:14px 0 6px; letter-spacing:6px; }
+  .stars .s{ display:inline-block; opacity:0; transform:scale(.2); animation:starPop .5s cubic-bezier(.34,1.56,.64,1) forwards; }
+  .final-score{ font-size:clamp(18px,5vw,22px); font-weight:700; color:var(--ink-soft); margin-top:8px; }
+  .final-score b{ font-size:1.5em; color:var(--primary-d); font-weight:900; }
+  .end-msg{ font-size:clamp(15px,4.4vw,18px); font-weight:700; color:var(--ink); margin:14px 4px 26px; }
+
+  /* ============ 动画 / 撒花 ============ */
+  @keyframes pop{ 0%{transform:scale(.6);} 60%{transform:scale(1.18);} 100%{transform:scale(1);} }
+  @keyframes bounceIn{ 0%{opacity:0; transform:scale(.4);} 60%{opacity:1; transform:scale(1.1);} 80%{transform:scale(.96);} 100%{transform:scale(1);} }
+  @keyframes shake{ 0%,100%{transform:translateX(0);} 20%{transform:translateX(-8px);} 40%{transform:translateX(8px);} 60%{transform:translateX(-6px);} 80%{transform:translateX(6px);} }
+  @keyframes starPop{ to{opacity:1; transform:scale(1);} }
+
+  .confetti-layer{ position:fixed; inset:0; pointer-events:none; overflow:hidden; z-index:60; }
+  .confetti-piece{ position:absolute; top:-34px; animation:fall 1.4s cubic-bezier(.3,.7,.5,1) forwards; will-change:transform; }
+  @keyframes fall{ 0%{transform:translateY(-34px) rotate(0); opacity:1;} 100%{transform:translateY(108vh) rotate(620deg); opacity:0;} }
+
+  /* 尊重减少动效偏好 */
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration:.001ms !important; animation-iteration-count:1 !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ============ 游戏页 ============ -->
+  <section class="screen game-screen" id="gameScreen" hidden>
+    <div class="hud">
+      <div class="pill progress">第 <b id="qIndex">1</b> / 5 题</div>
+      <div class="pill score">⭐ <b id="scoreVal">0</b></div>
+    </div>
+
+    <div class="game-area" id="gameArea">
+      <div class="expr-card" id="exprCard">
+        <div class="tag">算一算</div>
+        <div class="expr" id="expr">… <span class="eq">= ?</span></div>
+      </div>
+
+      <div class="step">
+        <div class="step-head"><span class="badge">第一步</span><span class="q">先算什么？</span></div>
+        <div class="ops" data-group="first">
+          <button class="op op-add" data-op="加法" aria-pressed="false"><span class="sym">➕</span><span class="lbl">加法</span></button>
+          <button class="op op-sub" data-op="减法" aria-pressed="false"><span class="sym">➖</span><span class="lbl">减法</span></button>
+          <button class="op op-mul" data-op="乘法" aria-pressed="false"><span class="sym">✖️</span><span class="lbl">乘法</span></button>
+          <button class="op op-div" data-op="除法" aria-pressed="false"><span class="sym">➗</span><span class="lbl">除法</span></button>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-head"><span class="badge">第二步</span><span class="q">再算什么？</span></div>
+        <div class="ops" data-group="second">
+          <button class="op op-add" data-op="加法" aria-pressed="false"><span class="sym">➕</span><span class="lbl">加法</span></button>
+          <button class="op op-sub" data-op="减法" aria-pressed="false"><span class="sym">➖</span><span class="lbl">减法</span></button>
+          <button class="op op-mul" data-op="乘法" aria-pressed="false"><span class="sym">✖️</span><span class="lbl">乘法</span></button>
+          <button class="op op-div" data-op="除法" aria-pressed="false"><span class="sym">➗</span><span class="lbl">除法</span></button>
+        </div>
+      </div>
+
+      <div class="result-block">
+        <div class="result-row">
+          <span class="lbl">结果</span>
+          <div class="result-display empty" id="resultDisplay">?</div>
+        </div>
+      </div>
+
+      <div class="keypad" id="keypad">
+        <button class="key" data-k="1">1</button>
+        <button class="key" data-k="2">2</button>
+        <button class="key" data-k="3">3</button>
+        <button class="key" data-k="4">4</button>
+        <button class="key" data-k="5">5</button>
+        <button class="key" data-k="6">6</button>
+        <button class="key" data-k="7">7</button>
+        <button class="key" data-k="8">8</button>
+        <button class="key" data-k="9">9</button>
+        <button class="key key-back" data-k="back">⌫</button>
+        <button class="key" data-k="0">0</button>
+        <button class="key key-clear" data-k="clear">清空</button>
+      </div>
+
+      <div class="feedback" id="feedback" aria-live="polite"></div>
+
+      <button class="btn-submit" id="submitBtn" disabled>提交答案 ✅</button>
+    </div>
+  </section>
+
+  <!-- ============ 结束页 ============ -->
+  <section class="screen end-screen" id="endScreen" hidden>
+    <div class="end-emoji" id="endEmoji">🎉</div>
+    <div class="end-title" id="endTitle">挑战完成！</div>
+    <div class="stars" id="stars"></div>
+    <div class="final-score">得分 <b id="finalScore">0</b> / 100</div>
+    <div class="end-msg" id="endMsg">…</div>
+    <button class="btn-go" id="restartBtn">再玩一次 🔄</button>
+  </section>
+
+</div>
+
+<div class="confetti-layer" id="confettiLayer" aria-hidden="true"></div>
+
+<!-- ============ 经过验证的题目生成器（原样粘贴） ============ -->
+<script>
+(function (global) {
+  "use strict";
+  function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+  function multPair() {
+    const allowOne = Math.random() < 0.1;
+    const lo = allowOne ? 1 : 2;
+    return [randInt(lo, 9), randInt(2, 9)];
+  }
+  function divPair() {
+    const C = randInt(2, 9);
+    const allowOne = Math.random() < 0.08;
+    const Q = allowOne ? 1 : randInt(2, 9);
+    return [C * Q, C];
+  }
+  const PATTERNS = [
+    () => { const [B, C] = multPair(); const prod = B * C; const A = randInt(1, 30);
+      return { expr: A + " + " + B + " × " + C, first: "乘法", second: "加法", result: A + prod }; },
+    () => { const [B, C] = multPair(); const prod = B * C; const A = randInt(1, 30);
+      return { expr: B + " × " + C + " + " + A, first: "乘法", second: "加法", result: A + prod }; },
+    () => { const [B, C] = divPair(); const q = B / C; const A = randInt(1, 30);
+      return { expr: A + " + " + B + " ÷ " + C, first: "除法", second: "加法", result: A + q }; },
+    () => { const [B, C] = divPair(); const q = B / C; const A = randInt(1, 30);
+      return { expr: B + " ÷ " + C + " + " + A, first: "除法", second: "加法", result: A + q }; },
+    () => { const [B, C] = multPair(); const prod = B * C; const A = randInt(prod + 1, prod + 30);
+      return { expr: A + " - " + B + " × " + C, first: "乘法", second: "减法", result: A - prod }; },
+    () => { const [B, C] = multPair(); const prod = B * C; const A = randInt(1, prod - 1);
+      return { expr: B + " × " + C + " - " + A, first: "乘法", second: "减法", result: prod - A }; },
+    () => { const [B, C] = divPair(); const q = B / C; const A = randInt(q + 1, q + 30);
+      return { expr: A + " - " + B + " ÷ " + C, first: "除法", second: "减法", result: A - q }; },
+    () => { const A = randInt(1, 9), B = randInt(1, 9), C = randInt(2, 9);
+      return { expr: "(" + A + " + " + B + ") × " + C, first: "加法", second: "乘法", result: (A + B) * C }; },
+    () => { const A = randInt(1, 9), B = randInt(1, 9), C = randInt(2, 9);
+      return { expr: C + " × (" + A + " + " + B + ")", first: "加法", second: "乘法", result: (A + B) * C }; },
+    () => { const C = randInt(2, 9), Q = randInt(2, 9); const sum = C * Q;
+      const A = randInt(1, sum - 1); const B = sum - A; if (A > 9 || B > 9) return null;
+      return { expr: "(" + A + " + " + B + ") ÷ " + C, first: "加法", second: "除法", result: Q }; },
+    () => { const B = randInt(1, 5), C = randInt(1, 5); const sum = B + C; if (sum < 2) return null;
+      const Q = randInt(2, 9); const A = sum * Q;
+      return { expr: A + " ÷ (" + B + " + " + C + ")", first: "加法", second: "除法", result: Q }; },
+    () => { const A = randInt(3, 9), B = randInt(1, A - 1), C = randInt(2, 9);
+      return { expr: "(" + A + " - " + B + ") × " + C, first: "减法", second: "乘法", result: (A - B) * C }; },
+    () => { const A = randInt(3, 9), B = randInt(1, A - 1), C = randInt(2, 9);
+      return { expr: C + " × (" + A + " - " + B + ")", first: "减法", second: "乘法", result: (A - B) * C }; },
+    () => { const C = randInt(2, 9), Q = randInt(2, 9); const diff = C * Q;
+      const B = randInt(1, 8); const A = B + diff; if (A > 20) return null;
+      return { expr: "(" + A + " - " + B + ") ÷ " + C, first: "减法", second: "除法", result: Q }; },
+    () => { const B = randInt(3, 9), C = randInt(1, B - 1); const diff = B - C; if (diff < 2) return null;
+      const Q = randInt(2, 9); const A = diff * Q;
+      return { expr: A + " ÷ (" + B + " - " + C + ")", first: "减法", second: "除法", result: Q }; },
+  ];
+  function safeEval(expr) {
+    try {
+      const s = expr.replace(/×/g, "*").replace(/÷/g, "/");
+      if (!/^[\d+\-*/() ]+$/.test(s)) return null;
+      return Function('"use strict";return (' + s + ")")();
+    } catch (e) { return null; }
+  }
+  function generateQuestion(maxTries) {
+    maxTries = maxTries || 50;
+    for (let i = 0; i < maxTries; i++) {
+      const fn = PATTERNS[Math.floor(Math.random() * PATTERNS.length)];
+      const q = fn();
+      if (!q) continue;
+      const v = safeEval(q.expr);
+      if (v === null || v !== q.result) continue;
+      if (!Number.isInteger(v) || v < 0 || v > 99) continue;
+      return q;
+    }
+    return { expr: "2 + 3 × 4", first: "乘法", second: "加法", result: 14 };
+  }
+  global.MixedOpsGenerator = { generateQuestion: generateQuestion };
+})(window);
+</script>
+
+<!-- ============ 游戏逻辑 ============ -->
+<script>
+(function(){
+  "use strict";
+
+  var TOTAL = 5, PER = 20;
+
+  // 游戏状态
+  var state = {
+    questions: [], idx: 0, score: 0, correctCount: 0,
+    sel: { first: null, second: null },
+    typed: "", answered: false, lastCorrect: false
+  };
+
+  // DOM 引用
+  var $ = function(id){ return document.getElementById(id); };
+  var gameScreen = $("gameScreen"), endScreen = $("endScreen");
+  var exprEl = $("expr"), exprCard = $("exprCard"), qIndexEl = $("qIndex"), scoreValEl = $("scoreVal");
+  var resultDisplay = $("resultDisplay"), feedback = $("feedback"), submitBtn = $("submitBtn");
+  var gameArea = $("gameArea");
+
+  // ---------- 音效（WebAudio，首次手势后初始化） ----------
+  var actx = null;
+  function audioInit(){
+    try { if(!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){}
+    if(actx && actx.state === "suspended") actx.resume();
+  }
+  function playSound(type){
+    if(!actx) return;
+    try{
+      var t = actx.currentTime;
+      var o = actx.createOscillator(), g = actx.createGain();
+      o.connect(g); g.connect(actx.destination);
+      if(type === "correct"){
+        o.type = "sine";
+        o.frequency.setValueAtTime(523.25, t);
+        o.frequency.setValueAtTime(659.25, t + 0.11);
+        o.frequency.setValueAtTime(783.99, t + 0.22);
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(0.22, t + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
+        o.start(t); o.stop(t + 0.52);
+      } else if(type === "wrong"){
+        o.type = "triangle";
+        o.frequency.setValueAtTime(311, t);
+        o.frequency.exponentialRampToValueAtTime(138, t + 0.3);
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(0.16, t + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.36);
+        o.start(t); o.stop(t + 0.37);
+      } else if(type === "tap"){
+        o.type = "sine";
+        o.frequency.setValueAtTime(680, t);
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(0.07, t + 0.005);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.08);
+        o.start(t); o.stop(t + 0.09);
+      } else if(type === "win"){
+        var notes = [523.25, 659.25, 783.99, 1046.5];
+        notes.forEach(function(f, i){
+          var oo = actx.createOscillator(), gg = actx.createGain();
+          oo.connect(gg); gg.connect(actx.destination);
+          oo.type = "sine"; oo.frequency.setValueAtTime(f, t + i*0.13);
+          gg.gain.setValueAtTime(0.0001, t + i*0.13);
+          gg.gain.exponentialRampToValueAtTime(0.2, t + i*0.13 + 0.02);
+          gg.gain.exponentialRampToValueAtTime(0.0001, t + i*0.13 + 0.3);
+          oo.start(t + i*0.13); oo.stop(t + i*0.13 + 0.32);
+        });
+      }
+    } catch(e){}
+  }
+
+  // ---------- 撒花 ----------
+  function confetti(){
+    var layer = $("confettiLayer");
+    if(!layer) return;
+    var emojis = ["⭐","🎉","✨","🌟","🎊","💫","🏆"];
+    for(var i=0;i<16;i++){
+      var s = document.createElement("div");
+      s.className = "confetti-piece";
+      s.textContent = emojis[i % emojis.length];
+      s.style.left = (Math.random()*100) + "%";
+      s.style.fontSize = (18 + Math.random()*20) + "px";
+      s.style.animationDelay = (Math.random()*0.25) + "s";
+      layer.appendChild(s);
+      (function(node){ setTimeout(function(){ if(node.parentNode) node.parentNode.removeChild(node); }, 1600); })(s);
+    }
+  }
+
+  // ---------- 屏幕切换 ----------
+  function showScreen(name){
+    gameScreen.hidden = name !== "game";
+    endScreen.hidden = name !== "end";
+    window.scrollTo(0, 0);
+  }
+
+  // ---------- 渲染 ----------
+  function renderOps(){
+    var groups = document.querySelectorAll(".ops");
+    for(var gi=0; gi<groups.length; gi++){
+      var g = groups[gi], groupName = g.getAttribute("data-group");
+      var btns = g.querySelectorAll(".op");
+      for(var bi=0; bi<btns.length; bi++){
+        var isSel = state.sel[groupName] === btns[bi].getAttribute("data-op");
+        btns[bi].classList.toggle("sel", isSel);
+        btns[bi].setAttribute("aria-pressed", isSel ? "true" : "false");
+      }
+    }
+  }
+
+  function renderTyped(){
+    var empty = state.typed === "";
+    resultDisplay.textContent = empty ? "?" : state.typed;
+    resultDisplay.classList.toggle("empty", empty);
+    resultDisplay.classList.toggle("fill", !empty);
+  }
+
+  function refreshSubmit(){
+    var ready = !state.answered && state.sel.first && state.sel.second && state.typed !== "";
+    submitBtn.disabled = !ready;
+  }
+
+  function bumpScore(){
+    scoreValEl.textContent = state.score;
+    scoreValEl.classList.remove("bump");
+    void scoreValEl.offsetWidth; // 重启动画
+    scoreValEl.classList.add("bump");
+  }
+
+  // ---------- 出题 ----------
+  function loadQuestion(i){
+    var q = state.questions[i];
+    exprEl.innerHTML = "";
+    exprEl.appendChild(document.createTextNode(q.expr + " "));
+    var eq = document.createElement("span");
+    eq.className = "eq";
+    eq.textContent = "= ?";
+    exprEl.appendChild(eq);
+
+    qIndexEl.textContent = (i + 1);
+
+    state.sel.first = null;
+    state.sel.second = null;
+    state.typed = "";
+    state.answered = false;
+
+    renderOps();
+    renderTyped();
+
+    feedback.textContent = "";
+    feedback.className = "feedback";
+
+    gameArea.classList.remove("locked");
+    submitBtn.textContent = "提交答案 ✅";
+    refreshSubmit();
+
+    // 表达式入场动画
+    exprCard.classList.remove("enter", "shake");
+    void exprCard.offsetWidth;
+    exprCard.classList.add("enter");
+  }
+
+  // ---------- 选择运算 ----------
+  function selectOp(group, op){
+    if(state.answered) return;
+    state.sel[group] = op;       // 点击即选中，再点其它可更换
+    playSound("tap");
+    renderOps();
+    refreshSubmit();
+  }
+
+  // ---------- 数字键盘 ----------
+  function pressKey(k){
+    if(state.answered) return;
+    if(k === "back"){
+      state.typed = state.typed.slice(0, -1);
+    } else if(k === "clear"){
+      state.typed = "";
+    } else {
+      // 数字，结果 ≤ 99，最多两位
+      if(state.typed.length >= 2) return;
+      if(state.typed === "0") state.typed = k; // 去掉前导零
+      else state.typed += k;
+    }
+    playSound("tap");
+    renderTyped();
+    refreshSubmit();
+  }
+
+  // ---------- 判定 ----------
+  function evaluate(){
+    if(state.answered) return;
+    var q = state.questions[state.idx];
+    var correct =
+      state.sel.first === q.first &&
+      state.sel.second === q.second &&
+      Number(state.typed) === q.result;
+
+    state.answered = true;
+    refreshSubmit();
+    gameArea.classList.add("locked");
+
+    if(correct){
+      state.lastCorrect = true;
+      state.score += PER;
+      state.correctCount++;
+      playSound("correct");
+      confetti();
+      feedback.innerHTML = "🎉 答对啦！ <b>+20 分</b>";
+      feedback.className = "feedback ok pop";
+      bumpScore();
+      setTimeout(advance, 1300);
+    } else {
+      playSound("wrong");
+      var OPC = { "加法":"add", "减法":"sub", "乘法":"mul", "除法":"div" };
+      feedback.innerHTML =
+        '💡 正确答案：先算 <span class="hl hl-' + OPC[q.first] + '">' + q.first + '</span>' +
+        '，再算 <span class="hl hl-' + OPC[q.second] + '">' + q.second + '</span>' +
+        '，结果 = <span class="hl hl-num">' + q.result + '</span>';
+      feedback.className = "feedback no shake";
+      exprCard.classList.remove("shake");
+      void exprCard.offsetWidth;
+      exprCard.classList.add("shake");
+      state.lastCorrect = false;
+      submitBtn.textContent = "下一题 ▶";
+      submitBtn.disabled = false;
+    }
+  }
+
+  function advance(){
+    state.idx++;
+    if(state.idx >= TOTAL){
+      endGame();
+    } else {
+      loadQuestion(state.idx);
+    }
+  }
+
+  // ---------- 开始 / 重玩 ----------
+  function startGame(){
+    audioInit();
+    state.questions = [];
+    for(var i=0;i<TOTAL;i++){
+      state.questions.push(window.MixedOpsGenerator.generateQuestion());
+    }
+    state.idx = 0;
+    state.score = 0;
+    state.correctCount = 0;
+    scoreValEl.textContent = "0";
+    showScreen("game");
+    loadQuestion(0);
+  }
+
+  function endGame(){
+    var c = state.correctCount;
+    var starsHtml, msg, emoji, title;
+    if(c === 5){
+      title = "满分通关！"; starsHtml = "⭐⭐⭐"; msg = "全部答对！你是运算小达人！"; emoji = "🏆";
+    } else if(c === 4){
+      title = "真棒！"; starsHtml = "⭐⭐"; msg = "就差一点点啦，再来一次冲满分！"; emoji = "🌟";
+    } else if(c === 3){
+      title = "不错哦！"; starsHtml = "⭐"; msg = "已经掌握不少啦，多练几次更厉害！"; emoji = "😊";
+    } else {
+      title = "继续加油！"; starsHtml = "✨"; msg = "没关系，运算顺序多想想就会进步！"; emoji = "💪";
+    }
+
+    // 星星逐个弹出
+    var starsEl = $("stars");
+    starsEl.innerHTML = "";
+    var chars = starsHtml.split("");
+    for(var i=0;i<chars.length;i++){
+      var sp = document.createElement("span");
+      sp.className = "s";
+      sp.textContent = chars[i];
+      sp.style.animationDelay = (0.15 + i*0.18) + "s";
+      starsEl.appendChild(sp);
+    }
+
+    $("endTitle").textContent = title;
+    $("finalScore").textContent = state.score;
+    $("endMsg").textContent = msg;
+    $("endEmoji").textContent = emoji;
+
+    showScreen("end");
+    if(c >= 4){
+      playSound("win");
+      confetti();
+      setTimeout(confetti, 350);
+    }
+  }
+
+  // ---------- 事件绑定 ----------
+  $("restartBtn").addEventListener("click", startGame);
+  submitBtn.addEventListener("click", function(){
+    if(state.answered && !state.lastCorrect){ advance(); }
+    else { evaluate(); }
+  });
+
+  // 用事件代理处理运算按钮与键盘按钮
+  document.addEventListener("click", function(e){
+    var opBtn = e.target.closest(".op");
+    if(opBtn){
+      var group = opBtn.parentNode.getAttribute("data-group");
+      selectOp(group, opBtn.getAttribute("data-op"));
+      return;
+    }
+    var keyBtn = e.target.closest(".key");
+    if(keyBtn){
+      pressKey(keyBtn.getAttribute("data-k"));
+      return;
+    }
+  });
+
+  // 进入页面直接开始游戏；音频在首次点击后激活
+  document.addEventListener("pointerdown", function(){ audioInit(); }, { once: true });
+  startGame();
+
+})();
+</script>
+
+</body>
+</html>
