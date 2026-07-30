@@ -78,6 +78,14 @@
             <label class="lbl" for="yOffset">🎯 基准线微调 <span class="val" id="yOffsetVal">0.5 pt</span></label>
             <input id="yOffset" type="range" min="-6" max="6" step="0.1" value="0.5" />
           </div>
+          <div class="slider-row">
+            <label class="lbl" for="slantAngle">📐 斜线角度 <span class="val" id="slantAngleVal">12°</span></label>
+            <input id="slantAngle" type="range" min="0" max="30" step="1" value="12" />
+          </div>
+          <div class="slider-row">
+            <label class="lbl" for="slantSpacing">📏 斜线间距 <span class="val" id="slantSpacingVal">18 pt</span></label>
+            <input id="slantSpacing" type="range" min="6" max="50" step="1" value="18" />
+          </div>
           <div class="row">
             <label class="lbl" for="theme">🎨 配色</label>
             <select id="theme">
@@ -89,6 +97,7 @@
         <div class="toggles">
           <label class="switch"><input id="keywordBold" type="checkbox" checked /><span>核心词加粗</span></label>
           <label class="switch"><input id="showMarkers" type="checkbox" checked /><span>显示行首小标记</span></label>
+          <label class="switch"><input id="slantEnabled" type="checkbox" /><span>📐 带定位斜线</span></label>
         </div>
         <p class="hint">
           🖨️ 打印小贴士：字母悬空调大“基准线微调”；字母下沉调小；超出右边距调小字号或调大边距。

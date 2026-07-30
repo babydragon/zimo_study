@@ -38,6 +38,12 @@ pub struct Params {
     pub keyword_bold: bool,
     /// 是否在每行行首绘制 emoji 标记（🔊 / ✏）。
     pub show_markers: bool,
+    /// 是否叠加“带定位”斜线（提示书写倾斜度与字母宽度）。
+    pub slant_enabled: bool,
+    /// 斜线倾斜角度（度，相对竖直方向）。
+    pub slant_angle: f64,
+    /// 相邻斜线的水平间距（pt）。
+    pub slant_spacing: f64,
     /// 正文手写字体在 typst.ts 中注册的字体名。
     pub font_name: String,
     /// 配色方案：`color` 或 `bw`（黑白激光）。
@@ -59,6 +65,9 @@ impl Default for Params {
             empty_rows: 2.0,
             keyword_bold: true,
             show_markers: true,
+            slant_enabled: false,
+            slant_angle: 12.0,
+            slant_spacing: 18.0,
             font_name: "EnCopybook".to_string(),
             theme: "color".to_string(),
         }
@@ -76,6 +85,8 @@ impl Params {
         self.trace_rows = self.trace_rows.min(5);
         let er = self.empty_rows.round() as i64;
         self.empty_rows = clamp(er as f64, 0.0, 6.0);
+        self.slant_angle = clamp(self.slant_angle, 0.0, 45.0);
+        self.slant_spacing = clamp(self.slant_spacing, 4.0, 60.0);
         self
     }
 
@@ -234,7 +245,11 @@ fn typst_preamble(p: &Params) -> String {
 #let rg = {rg}pt
 #let bg = {bg}pt
 #let padL = {padl}pt
+#let contentW = {content_w}pt
 #let showMarks = {show_marks}
+#let showSlant = {show_slant}
+#let slant-angle = {slant_angle}deg
+#let slant-spacing = {slant_spacing}pt
 #let emojiFont = "Noto Emoji"
 #let iconFs = 14pt
 
@@ -245,9 +260,26 @@ fn typst_preamble(p: &Params) -> String {
 #let c-trace = {trace_c}
 #let c-mark-read = {mark_read}
 #let c-mark-write = {mark_write}
+#let c-slant = {slant_color}
+
+// 带定位斜线：在四线格上叠加淡色虚斜线，提示书写倾斜度与字母宽度。
+// 斜线从下到上向右倾斜，水平间距为 slant-spacing。
+#let slant-guides(w) = {{
+  let span = 3 * ls
+  let dx = span * calc.tan(slant-angle)
+  let i = 0
+  // 用绝对的内容宽度 contentW 做循环边界，避免与相对宽度 w 混用比较报错。
+  while i * slant-spacing < contentW + dx {{
+    let xb = i * slant-spacing
+    place(top + left, line(start: (xb, span), end: (xb + dx, 0pt),
+      stroke: (paint: c-slant, thickness: 0.25pt, dash: "dashed")))
+    i += 1
+  }}
+}}
 
 // 单组四线三格：在高度 3*ls 的块内绝对放置 4 条横线。
 // 第 3 线（基准线）= 珊瑚红、加粗；其余 = 淡薄荷绿。
+// 注意：斜线不在这里画 —— 原文/描红行不画斜线，避免范例字母骑在斜线上。
 #let four-lines(w) = {{
   place(top + left, line(length: w, stroke: 0.3pt + c-line))
   place(top + left, dy: ls, line(length: w, stroke: 0.3pt + c-line))
@@ -263,9 +295,11 @@ fn typst_preamble(p: &Params) -> String {
 #let marker(mark, color) = place(top + left, dx: 6pt, dy: 2 * ls - 1.15 * iconFs + yoff,
   text(font: emojiFont, size: iconFs, fill: color)[#(if mark == "read" {{ "🔊" }} else {{ "✏" }})])
 
-// 留空行：仅四线格；开启标记时也画一个 ✏。
+// 留空行：仅四线格；开启标记时画一个 ✏；开启带定位时叠加淡色斜线。
+// 斜线只画在空行（独立书写行），原文/描红行不画，避免范例字母骑在斜线上。
 #let empty-row(w, mark: none) = block(width: w, height: 3 * ls, spacing: 0pt)[
   #four-lines(w)
+  #if showSlant {{ slant-guides(w) }}
   #if showMarks and mark == "write" {{ marker("write", c-mark-write) }}
 ]
 
@@ -296,7 +330,12 @@ fn typst_preamble(p: &Params) -> String {
         rg = p.row_gap,
         bg = p.block_gap,
         padl = if p.show_markers { 28.0 } else { 8.0 },
+        content_w = 595.28 - 2.0 * p.margin,
         show_marks = if p.show_markers { "true" } else { "false" },
+        show_slant = if p.slant_enabled { "true" } else { "false" },
+        slant_angle = p.slant_angle,
+        slant_spacing = p.slant_spacing,
+        slant_color = colors.slant,
         line_c = colors.line_other,
         base_c = colors.line_base,
         normal_c = colors.text_normal,
@@ -315,6 +354,7 @@ struct Colors {
     text_trace: &'static str,
     mark_read: &'static str,
     mark_write: &'static str,
+    slant: &'static str,
 }
 
 fn color_set(theme: &str) -> Colors {
@@ -327,6 +367,7 @@ fn color_set(theme: &str) -> Colors {
             text_trace: "rgb(\"#CCCCCC\")",
             mark_read: "black",
             mark_write: "rgb(\"#888888\")",
+            slant: "rgb(\"#D9D9D9\")",
         }
     } else {
         Colors {
@@ -337,6 +378,7 @@ fn color_set(theme: &str) -> Colors {
             text_trace: "rgb(\"#9DBBD4\")",
             mark_read: "rgb(\"#004D99\")",
             mark_write: "rgb(\"#9AA7AD\")",
+            slant: "rgb(\"#E3E3E3\")",
         }
     }
 }

@@ -12,7 +12,7 @@ Colour it **red**, please.`;
 
 const STORE_KEY = 'english-copybook/v2';
 const LEGACY_STORE_KEY = 'english-copybook/v1';
-const BUILD_TAG = '20260706-1930';
+const BUILD_TAG = '20260707-1030';
 const TYPST_COMPILER_WASM_CDN = 'https://cdn.jsdelivr.net/npm/@myriaddreamin/typst-ts-web-compiler@0.7.0/pkg/typst_ts_web_compiler_bg.wasm';
 
 // ---------- DOM ----------
@@ -36,6 +36,11 @@ const ui = {
   emptyRows: $('emptyRows'),
   keywordBold: $('keywordBold'),
   showMarkers: $('showMarkers'),
+  slantEnabled: $('slantEnabled'),
+  slantAngle: $('slantAngle'),
+  slantAngleVal: $('slantAngleVal'),
+  slantSpacing: $('slantSpacing'),
+  slantSpacingVal: $('slantSpacingVal'),
   theme: $('theme'),
   generateBtn: $('generateBtn'),
   advancedToggle: $('advancedToggle'),
@@ -72,6 +77,9 @@ function saveState() {
       emptyRows: ui.emptyRows.value,
       keywordBold: ui.keywordBold.checked,
       showMarkers: ui.showMarkers.checked,
+      slantEnabled: ui.slantEnabled.checked,
+      slantAngle: ui.slantAngle.value,
+      slantSpacing: ui.slantSpacing.value,
       theme: ui.theme.value,
     }));
   } catch (e) { /* localStorage 不可用，忽略 */ }
@@ -103,6 +111,9 @@ function loadState() {
   ui.emptyRows.value = s.emptyRows ?? 2;
   ui.keywordBold.checked = s.keywordBold ?? true;
   ui.showMarkers.checked = s.showMarkers ?? true;
+  ui.slantEnabled.checked = s.slantEnabled ?? false;
+  ui.slantAngle.value = s.slantAngle ?? 12;
+  ui.slantSpacing.value = s.slantSpacing ?? 18;
   ui.theme.value = s.theme ?? 'color';
 }
 
@@ -115,6 +126,8 @@ function bindSliders() {
     [ui.blockGap, ui.blockGapVal, (v) => v + ' pt'],
     [ui.margin, ui.marginVal, (v) => v + ' pt'],
     [ui.yOffset, ui.yOffsetVal, (v) => v + ' pt'],
+    [ui.slantAngle, ui.slantAngleVal, (v) => v + '°'],
+    [ui.slantSpacing, ui.slantSpacingVal, (v) => v + ' pt'],
   ];
   for (const [el, valEl, fmt] of map) {
     const update = () => { valEl.textContent = fmt(el.value); saveState(); };
@@ -122,7 +135,7 @@ function bindSliders() {
     update();
   }
   // 复选/下拉变化也保存
-  [ui.title, ui.traceRows, ui.emptyRows, ui.keywordBold, ui.showMarkers, ui.theme, ui.input]
+  [ui.title, ui.traceRows, ui.emptyRows, ui.keywordBold, ui.showMarkers, ui.slantEnabled, ui.theme, ui.input]
     .forEach((el) => el.addEventListener('change', saveState));
   ui.input.addEventListener('input', saveState);
 }
@@ -141,6 +154,9 @@ function collectParams() {
     empty_rows: parseInt(ui.emptyRows.value, 10) || 0,
     keyword_bold: ui.keywordBold.checked,
     show_markers: ui.showMarkers.checked,
+    slant_enabled: ui.slantEnabled.checked,
+    slant_angle: parseFloat(ui.slantAngle.value),
+    slant_spacing: parseFloat(ui.slantSpacing.value),
     font_name: 'EnCopybook',
     theme: ui.theme.value,
   };
@@ -280,6 +296,9 @@ function init() {
     ui.emptyRows.value = 2;
     ui.keywordBold.checked = true;
     ui.showMarkers.checked = true;
+    ui.slantEnabled.checked = false;
+    ui.slantAngle.value = 12;
+    ui.slantSpacing.value = 18;
     ui.theme.value = 'color';
     ui.input.dispatchEvent(new Event('input'));
     ui.fontSize.dispatchEvent(new Event('input'));
