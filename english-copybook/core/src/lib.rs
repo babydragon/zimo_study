@@ -67,7 +67,7 @@ impl Default for Params {
             show_markers: true,
             slant_enabled: false,
             slant_angle: 12.0,
-            slant_spacing: 18.0,
+            slant_spacing: 0.0,
             font_name: "EnCopybook".to_string(),
             theme: "color".to_string(),
         }
@@ -86,7 +86,8 @@ impl Params {
         let er = self.empty_rows.round() as i64;
         self.empty_rows = clamp(er as f64, 0.0, 6.0);
         self.slant_angle = clamp(self.slant_angle, 0.0, 45.0);
-        self.slant_spacing = clamp(self.slant_spacing, 4.0, 60.0);
+        // slant_spacing: 0 表示自动，需保留；其余收敛到 4~60
+        self.slant_spacing = if self.slant_spacing <= 0.0 { 0.0 } else { clamp(self.slant_spacing, 4.0, 60.0) };
         self
     }
 
@@ -103,6 +104,15 @@ impl Params {
 
     fn effective_empty_rows(&self) -> u32 {
         self.empty_rows.round() as u32
+    }
+
+    /// slant_spacing == 0 表示自动：按字号 ×0.33（实测该斜体字体平均字宽 ≈ 0.33em）。
+    fn effective_slant_spacing(&self) -> f64 {
+        if self.slant_spacing > 0.0 {
+            clamp(self.slant_spacing, 4.0, 60.0)
+        } else {
+            (self.effective_font_size() * 0.33).max(4.0)
+        }
     }
 }
 
@@ -225,6 +235,7 @@ fn render_trace_inline(segs: &[Segment], trace_color: &str) -> String {
 /// 生成 Typst 文档头部（set page / colors / 行函数定义）。
 fn typst_preamble(p: &Params) -> String {
     let fs = p.effective_font_size();
+    let ss = p.effective_slant_spacing();
     let colors = color_set(&p.theme);
 
     format!(
@@ -272,7 +283,7 @@ fn typst_preamble(p: &Params) -> String {
   while i * slant-spacing < contentW + dx {{
     let xb = i * slant-spacing
     place(top + left, line(start: (xb, span), end: (xb + dx, 0pt),
-      stroke: (paint: c-slant, thickness: 0.25pt, dash: "dashed")))
+      stroke: (paint: c-slant, thickness: 0.3pt, dash: "dashed")))
     i += 1
   }}
 }}
@@ -334,7 +345,7 @@ fn typst_preamble(p: &Params) -> String {
         show_marks = if p.show_markers { "true" } else { "false" },
         show_slant = if p.slant_enabled { "true" } else { "false" },
         slant_angle = p.slant_angle,
-        slant_spacing = p.slant_spacing,
+        slant_spacing = ss,
         slant_color = colors.slant,
         line_c = colors.line_other,
         base_c = colors.line_base,
@@ -367,7 +378,7 @@ fn color_set(theme: &str) -> Colors {
             text_trace: "rgb(\"#CCCCCC\")",
             mark_read: "black",
             mark_write: "rgb(\"#888888\")",
-            slant: "rgb(\"#D9D9D9\")",
+            slant: "rgb(\"#888888\")",
         }
     } else {
         Colors {
@@ -378,7 +389,7 @@ fn color_set(theme: &str) -> Colors {
             text_trace: "rgb(\"#9DBBD4\")",
             mark_read: "rgb(\"#004D99\")",
             mark_write: "rgb(\"#9AA7AD\")",
-            slant: "rgb(\"#E3E3E3\")",
+            slant: "rgb(\"#A0A0A0\")",
         }
     }
 }

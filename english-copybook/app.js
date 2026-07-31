@@ -113,7 +113,7 @@ function loadState() {
   ui.showMarkers.checked = s.showMarkers ?? true;
   ui.slantEnabled.checked = s.slantEnabled ?? false;
   ui.slantAngle.value = s.slantAngle ?? 12;
-  ui.slantSpacing.value = s.slantSpacing ?? 18;
+  ui.slantSpacing.value = s.slantSpacing ?? 0;
   ui.theme.value = s.theme ?? 'color';
 }
 
@@ -127,7 +127,7 @@ function bindSliders() {
     [ui.margin, ui.marginVal, (v) => v + ' pt'],
     [ui.yOffset, ui.yOffsetVal, (v) => v + ' pt'],
     [ui.slantAngle, ui.slantAngleVal, (v) => v + '°'],
-    [ui.slantSpacing, ui.slantSpacingVal, (v) => v + ' pt'],
+    [ui.slantSpacing, ui.slantSpacingVal, (v) => (v === '0' || v === 0) ? '自动' : v + ' pt'],
   ];
   for (const [el, valEl, fmt] of map) {
     const update = () => { valEl.textContent = fmt(el.value); saveState(); };
@@ -298,7 +298,7 @@ function init() {
     ui.showMarkers.checked = true;
     ui.slantEnabled.checked = false;
     ui.slantAngle.value = 12;
-    ui.slantSpacing.value = 18;
+    ui.slantSpacing.value = 0;
     ui.theme.value = 'color';
     ui.input.dispatchEvent(new Event('input'));
     ui.fontSize.dispatchEvent(new Event('input'));
