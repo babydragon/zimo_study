@@ -1,0 +1,1027 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>语文作业纸生成器</title>
+  <style id="pageStyle"></style>
+  <style>
+    :root {
+      --bg: #fff8e7;
+      --paper: #fffdf5;
+      --ink: #2d3436;
+      --muted: #738089;
+      --primary: #ff6b35;
+      --primary-dark: #e85a28;
+      --secondary: #4ecdc4;
+      --line: #e17055;
+      --border: #ffe0cc;
+      --shadow: 0 8px 24px rgba(255, 107, 53, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .app {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 14px 14px 32px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 14px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 1.55rem;
+      color: var(--primary-dark);
+    }
+
+    .subtitle {
+      margin: 6px 0 0;
+      font-size: 0.92rem;
+      color: var(--muted);
+    }
+
+    .card {
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 14px;
+      margin-bottom: 14px;
+      box-shadow: var(--shadow);
+    }
+
+    .card-title {
+      margin: 0 0 12px;
+      font-size: 1.05rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .row:last-child { margin-bottom: 0; }
+
+    .label {
+      font-size: 1rem;
+      font-weight: 500;
+      flex: 1;
+    }
+
+    .hint {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    /* Segmented control */
+    .segment {
+      display: inline-flex;
+      background: #f0f0f0;
+      border-radius: 999px;
+      padding: 3px;
+      gap: 3px;
+    }
+
+    .segment button {
+      border: none;
+      background: transparent;
+      color: var(--ink);
+      font-size: 0.95rem;
+      padding: 8px 14px;
+      border-radius: 999px;
+      min-width: 44px;
+      min-height: 40px;
+      cursor: pointer;
+      transition: background .15s, color .15s;
+    }
+
+    .segment button.active {
+      background: #ffffff;
+      color: var(--primary-dark);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+      font-weight: 700;
+    }
+
+    /* Stepper */
+    .stepper {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .stepper button {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #ffffff;
+      color: var(--primary-dark);
+      font-size: 1.4rem;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .stepper button:active { background: #fff0e8; }
+    .stepper.disabled { opacity: 0.55; pointer-events: none; }
+    .stepper .unit {
+      font-size: 0.9rem;
+      color: var(--muted);
+      min-width: 28px;
+    }
+
+    .stepper input[type="number"] {
+      width: 64px;
+      height: 42px;
+      text-align: center;
+      font-size: 1.1rem;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #ffffff;
+      -moz-appearance: textfield;
+    }
+
+    .stepper input[type="number"]::-webkit-outer-spin-button,
+    .stepper input[type="number"]::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
+    /* Toggle switch */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 56px;
+      height: 32px;
+    }
+
+    .switch input { opacity: 0; width: 0; height: 0; }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background: #d1d1d1;
+      border-radius: 32px;
+      transition: .2s;
+    }
+
+    .slider:before {
+      content: "";
+      position: absolute;
+      height: 26px;
+      width: 26px;
+      left: 3px;
+      bottom: 3px;
+      background: #fff;
+      border-radius: 50%;
+      transition: .2s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    }
+
+    .switch input:checked + .slider { background: var(--secondary); }
+    .switch input:checked + .slider:before { transform: translateX(24px); }
+
+    /* Details / advanced */
+    details {
+      border: 1px dashed var(--border);
+      border-radius: 12px;
+      padding: 10px 12px;
+      margin-top: 4px;
+    }
+
+    summary {
+      font-size: 0.95rem;
+      color: var(--muted);
+      cursor: pointer;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    summary::after {
+      content: "▼";
+      font-size: 0.75rem;
+      transition: transform .2s;
+    }
+
+    details[open] summary::after { transform: rotate(180deg); }
+
+    .margin-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .margin-item { min-width: 0; }
+
+    .margin-item .stepper { flex-wrap: nowrap; min-width: 0; }
+
+    @media (min-width: 480px) {
+      .margin-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    .margin-item .label {
+      font-size: 0.9rem;
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    /* Preview */
+    .preview-wrap {
+      display: flex;
+      justify-content: center;
+    }
+
+    .preview-box {
+      width: 100%;
+      max-width: 360px;
+      background: #ffffff;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .preview-box svg {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .preview-info {
+      text-align: center;
+      margin-top: 10px;
+      font-size: 0.95rem;
+      color: var(--muted);
+    }
+
+    .preview-info strong { color: var(--ink); }
+
+    /* Tips */
+    .tips {
+      background: #fff4e6;
+      border-left: 4px solid var(--primary);
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      color: #5d4037;
+      line-height: 1.5;
+    }
+
+    .tips ul { margin: 6px 0 0; padding-left: 18px; }
+    .tips li { margin-bottom: 3px; }
+
+    /* Action buttons */
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 6px;
+    }
+
+    .btn {
+      border: none;
+      border-radius: 14px;
+      padding: 14px 10px;
+      font-size: 1.05rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-height: 52px;
+    }
+
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:active { background: var(--primary-dark); }
+    .btn-secondary { background: #ffffff; color: var(--ink); border: 1px solid var(--border); }
+    .btn-secondary:active { background: #f8f8f8; }
+    .btn-full { grid-column: 1 / -1; }
+
+    .status {
+      text-align: center;
+      font-size: 0.9rem;
+      color: var(--muted);
+      min-height: 1.4em;
+      margin-top: 8px;
+    }
+
+    /* Print only */
+    #printArea { display: none; }
+
+    @media print {
+      body { background: #fff; }
+      .no-print { display: none !important; }
+      #printArea {
+        display: block !important;
+        position: static;
+        margin: 0;
+        padding: 0;
+      }
+      .sheet {
+        width: var(--sheet-w);
+        height: var(--sheet-h);
+        overflow: hidden;
+        box-sizing: border-box;
+        break-after: page;
+        page-break-after: always;
+        position: relative;
+      }
+      .sheet:last-child { break-after: auto; page-break-after: auto; }
+    }
+
+    @media (min-width: 560px) {
+      .margin-grid { grid-template-columns: repeat(4, 1fr); }
+      h1 { font-size: 1.8rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app no-print">
+    <header>
+      <h1>📝 语文作业纸生成器</h1>
+      <p class="subtitle">方格纸 / 田字格纸 · 打印 / 导出 PDF</p>
+    </header>
+
+    <section class="card">
+      <h2 class="card-title">📐 格子类型</h2>
+      <div class="row">
+        <span class="label">类型</span>
+        <div class="segment" id="typeSeg">
+          <button data-value="fang" class="active">方格</button>
+          <button data-value="tian">田字格</button>
+        </div>
+      </div>
+      <div class="row">
+        <span class="label">格子边长 <span class="hint">每格多大</span></span>
+        <div class="stepper">
+          <button data-target="cell" data-delta="-1">−</button>
+          <input type="number" id="cellInput" min="1" max="50" step="1" />
+          <span class="unit">mm</span>
+          <button data-target="cell" data-delta="1">+</button>
+        </div>
+      </div>
+      <div class="row">
+        <span class="label">行间距 <span class="hint">两行之间空多少</span></span>
+        <div class="stepper">
+          <button data-target="gap" data-delta="-1">−</button>
+          <input type="number" id="gapInput" min="0" max="30" step="1" />
+          <span class="unit">mm</span>
+          <button data-target="gap" data-delta="1">+</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 class="card-title">📄 纸张与页数</h2>
+      <div class="row">
+        <span class="label">纸型</span>
+        <div class="segment" id="paperSeg">
+          <button data-value="A4">A4</button>
+          <button data-value="A5">A5</button>
+          <button data-value="B5" class="active">B5</button>
+        </div>
+      </div>
+      <div class="row">
+        <span class="label">页数</span>
+        <div class="segment" id="pagesSeg">
+          <button data-value="1">1</button>
+          <button data-value="5">5</button>
+          <button data-value="10" class="active">10</button>
+          <button data-value="20">20</button>
+        </div>
+      </div>
+      <div class="row">
+        <span class="label">双面打印 <span class="hint">奇数页自动加空白页</span></span>
+        <label class="switch">
+          <input type="checkbox" id="duplexInput" />
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="row">
+        <span class="label" id="looseLabel">活页本（26孔） <span class="hint">左边距固定 25mm</span></span>
+        <label class="switch">
+          <input type="checkbox" id="looseInput" />
+          <span class="slider"></span>
+        </label>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 class="card-title">↔️ 边距 <span class="hint" style="font-weight:normal">高级设置</span></h2>
+      <details id="advancedDetails">
+        <summary>展开边距设置</summary>
+        <div class="margin-grid">
+          <div class="margin-item">
+            <span class="label">上边距</span>
+            <div class="stepper">
+              <button data-target="marginTop" data-delta="-1">−</button>
+              <input type="number" id="marginTopInput" min="0" max="80" step="1" />
+              <span class="unit">mm</span>
+              <button data-target="marginTop" data-delta="1">+</button>
+            </div>
+          </div>
+          <div class="margin-item">
+            <span class="label">下边距</span>
+            <div class="stepper">
+              <button data-target="marginBottom" data-delta="-1">−</button>
+              <input type="number" id="marginBottomInput" min="0" max="80" step="1" />
+              <span class="unit">mm</span>
+              <button data-target="marginBottom" data-delta="1">+</button>
+            </div>
+          </div>
+          <div class="margin-item">
+            <span class="label">左边距</span>
+            <div class="stepper">
+              <button data-target="marginLeft" data-delta="-1">−</button>
+              <input type="number" id="marginLeftInput" min="0" max="80" step="1" />
+              <span class="unit">mm</span>
+              <button data-target="marginLeft" data-delta="1">+</button>
+            </div>
+          </div>
+          <div class="margin-item">
+            <span class="label">右边距</span>
+            <div class="stepper">
+              <button data-target="marginRight" data-delta="-1">−</button>
+              <input type="number" id="marginRightInput" min="0" max="80" step="1" />
+              <span class="unit">mm</span>
+              <button data-target="marginRight" data-delta="1">+</button>
+            </div>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <section class="card">
+      <h2 class="card-title">👀 预览第一页</h2>
+      <div class="preview-wrap">
+        <div class="preview-box" id="previewBox"></div>
+      </div>
+      <p class="preview-info" id="previewInfo">计算中…</p>
+    </section>
+
+    <section class="card tips">
+      <strong>🖨️ 打印前请检查</strong>
+      <ul>
+        <li>纸张大小选当前纸型（A4 / A5 / B5-JIS）</li>
+        <li>双面打印请选择“长边翻页”</li>
+        <li>页边距设为“无”，缩放 100%</li>
+        <li>关闭页眉页脚，避免网址和日期</li>
+      </ul>
+    </section>
+
+    <section class="actions no-print">
+      <button class="btn btn-secondary btn-full" id="resetBtn">↺ 恢复默认</button>
+      <button class="btn btn-primary" id="printBtn">🖨️ 打印</button>
+      <button class="btn btn-secondary" id="pdfBtn">📥 导出 PDF</button>
+    </section>
+
+    <p class="status no-print" id="status"></p>
+  </div>
+
+  <div id="printArea"></div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      const PAPER_SIZE = {
+        A4: [210, 297],
+        A5: [148, 210],
+        B5: [182, 257]
+      };
+
+      const HOLE_COUNT = { A4: 30, B5: 26, A5: 20 };
+
+      const PAPER_DEFAULT_MARGINS = {
+        A4: { top: 15, bottom: 15, left: 12, right: 12 },
+        A5: { top: 12, bottom: 12, left: 10, right: 10 },
+        B5: { top: 12, bottom: 12, left: 10, right: 10 }
+      };
+
+      const TYPE_NAMES = { fang: '方格', tian: '田字格' };
+
+      const DEFAULTS = {
+        paper: 'B5',
+        type: 'fang',
+        cellFang: 8,
+        cellTian: 12,
+        gapFang: 2,
+        gapTian: 2,
+        margins: { ...PAPER_DEFAULT_MARGINS.B5 },
+        looseLeaf: false,
+        pages: 10,
+        duplex: false,
+        marginsCustomized: false
+      };
+
+      const LS_KEY = 'zuowenzhi_settings_v1';
+
+      let state = loadState();
+      let savedLeft = null; // 活页关闭时还原左边距用
+
+      const els = {
+        typeSeg: document.getElementById('typeSeg'),
+        paperSeg: document.getElementById('paperSeg'),
+        pagesSeg: document.getElementById('pagesSeg'),
+        cellInput: document.getElementById('cellInput'),
+        gapInput: document.getElementById('gapInput'),
+        duplexInput: document.getElementById('duplexInput'),
+        looseInput: document.getElementById('looseInput'),
+        looseLabel: document.getElementById('looseLabel'),
+        marginTop: document.getElementById('marginTopInput'),
+        marginBottom: document.getElementById('marginBottomInput'),
+        marginLeft: document.getElementById('marginLeftInput'),
+        marginRight: document.getElementById('marginRightInput'),
+        previewBox: document.getElementById('previewBox'),
+        previewInfo: document.getElementById('previewInfo'),
+        pageStyle: document.getElementById('pageStyle'),
+        printArea: document.getElementById('printArea'),
+        status: document.getElementById('status'),
+        resetBtn: document.getElementById('resetBtn'),
+        printBtn: document.getElementById('printBtn'),
+        pdfBtn: document.getElementById('pdfBtn')
+      };
+
+      function loadState() {
+        try {
+          const raw = localStorage.getItem(LS_KEY);
+          if (!raw) return deepClone(DEFAULTS);
+          const parsed = JSON.parse(raw);
+          const merged = deepClone(DEFAULTS);
+          Object.assign(merged, parsed);
+          if (parsed.margins) Object.assign(merged.margins, parsed.margins);
+          return merged;
+        } catch (e) {
+          return deepClone(DEFAULTS);
+        }
+      }
+
+      function saveState() {
+        try {
+          localStorage.setItem(LS_KEY, JSON.stringify(state));
+        } catch (e) { /* ignore */ }
+      }
+
+      function deepClone(o) { return JSON.parse(JSON.stringify(o)); }
+
+      function currentCell() {
+        return state.type === 'fang' ? state.cellFang : state.cellTian;
+      }
+
+      function setCurrentCell(v) {
+        if (state.type === 'fang') state.cellFang = v;
+        else state.cellTian = v;
+      }
+
+      function currentGap() {
+        return state.type === 'fang' ? state.gapFang : state.gapTian;
+      }
+
+      function setCurrentGap(v) {
+        if (state.type === 'fang') state.gapFang = v;
+        else state.gapTian = v;
+      }
+
+      function paperDefaults(paper) {
+        return PAPER_DEFAULT_MARGINS[paper];
+      }
+
+      function applyPaperDefaults() {
+        if (!state.marginsCustomized) {
+          state.margins = { ...paperDefaults(state.paper) };
+        }
+        if (state.looseLeaf) {
+          state.margins.left = 25;
+        }
+      }
+
+      function setSegment(group, value) {
+        group.querySelectorAll('button').forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.value === String(value));
+        });
+      }
+
+      function bindSegment(group, key, callback) {
+        group.addEventListener('click', e => {
+          const btn = e.target.closest('button');
+          if (!btn) return;
+          state[key] = btn.dataset.value;
+          if (callback) callback();
+          updateUI();
+        });
+      }
+
+      function bindStepper(input, getVal, setVal, min, max) {
+        function change(delta) {
+          if (input.disabled) return;
+          let v = getVal() + delta;
+          if (v < min) v = min;
+          if (v > max) v = max;
+          setVal(v);
+          updateUI();
+        }
+        input.addEventListener('change', () => {
+          if (input.disabled) return;
+          let v = parseInt(input.value, 10);
+          if (Number.isNaN(v)) v = getVal();
+          if (v < min) v = min;
+          if (v > max) v = max;
+          setVal(v);
+          updateUI();
+        });
+        const parent = input.closest('.stepper');
+        parent.querySelectorAll('button').forEach(b => {
+          b.addEventListener('click', () => change(parseInt(b.dataset.delta, 10)));
+        });
+      }
+
+      function bindMargin(input, key) {
+        function setV(v) {
+          state.margins[key] = v;
+          state.marginsCustomized = true;
+          // 活页开启时，用户改动左边距视为基础值
+          if (key === 'left' && state.looseLeaf) {
+            savedLeft = v;
+          }
+        }
+        bindStepper(input, () => state.margins[key], setV, 0, 80);
+      }
+
+      function computeLayout() {
+        const [W, H] = PAPER_SIZE[state.paper];
+        const m = state.margins;
+        const cw = Math.max(1, W - m.left - m.right);
+        const ch = Math.max(1, H - m.top - m.bottom);
+        const cell = currentCell();
+        const gap = currentGap();
+        const cols = Math.max(1, Math.floor(cw / cell));
+        const rows = Math.max(1, Math.floor((ch + gap) / (cell + gap)));
+        const usedW = cols * cell;
+        const usedH = rows * cell + (rows - 1) * gap;
+        const offsetX = (cw - usedW) / 2;
+        const offsetY = (ch - usedH) / 2;
+        return { W, H, cw, ch, cell, gap, cols, rows, usedW, usedH, offsetX, offsetY, m };
+      }
+
+      // 用同一套 layout 数据绘制 SVG（预览、打印、PDF 都从这里取数）
+      function buildSvg(lay, isBlank) {
+        const { W, H, cw, ch, cell, gap, cols, rows, offsetX, offsetY, m } = lay;
+        const ns = 'http://www.w3.org/2000/svg';
+        const svg = document.createElementNS(ns, 'svg');
+        svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+        svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+        svg.setAttribute('width', '100%');
+        svg.setAttribute('height', '100%');
+
+        // 纸面
+        const page = document.createElementNS(ns, 'rect');
+        page.setAttribute('x', 0); page.setAttribute('y', 0);
+        page.setAttribute('width', W); page.setAttribute('height', H);
+        page.setAttribute('fill', '#fffdf5');
+        page.setAttribute('stroke', '#333');
+        page.setAttribute('stroke-width', '0.5');
+        svg.appendChild(page);
+
+        if (isBlank) {
+          const txt = document.createElementNS(ns, 'text');
+          txt.setAttribute('x', W / 2);
+          txt.setAttribute('y', H / 2);
+          txt.setAttribute('text-anchor', 'middle');
+          txt.setAttribute('dominant-baseline', 'middle');
+          txt.setAttribute('font-size', '8');
+          txt.setAttribute('fill', '#999');
+          txt.textContent = '空白页 · 双面占位';
+          svg.appendChild(txt);
+          return svg;
+        }
+
+        // 内容区外框（淡灰，辅助对齐）
+        const area = document.createElementNS(ns, 'rect');
+        area.setAttribute('x', m.left); area.setAttribute('y', m.top);
+        area.setAttribute('width', cw); area.setAttribute('height', ch);
+        area.setAttribute('fill', 'none');
+        area.setAttribute('stroke', '#ddd');
+        area.setAttribute('stroke-width', '0.25');
+        svg.appendChild(area);
+
+        const startX = m.left + offsetX;
+        const startY = m.top + offsetY;
+        const endX = startX + usedW(lay);
+        const endY = startY + usedH(lay);
+        const lineColor = state.type === 'fang' ? '#d35400' : '#c0392b';
+
+        // 竖线 + 横线：列方向左右顶格连续，gap 仅为行间垂直空白
+        for (let r = 0; r < rows; r++) {
+          const rowY = startY + r * (cell + gap);
+          for (let c = 0; c <= cols; c++) {
+            const x = startX + c * cell;
+            const line = document.createElementNS(ns, 'line');
+            line.setAttribute('x1', x); line.setAttribute('y1', rowY);
+            line.setAttribute('x2', x); line.setAttribute('y2', rowY + cell);
+            line.setAttribute('stroke', lineColor);
+            line.setAttribute('stroke-width', '0.25');
+            svg.appendChild(line);
+          }
+          for (const y of [rowY, rowY + cell]) {
+            const line = document.createElementNS(ns, 'line');
+            line.setAttribute('x1', startX); line.setAttribute('y1', y);
+            line.setAttribute('x2', endX); line.setAttribute('y2', y);
+            line.setAttribute('stroke', lineColor);
+            line.setAttribute('stroke-width', '0.25');
+            svg.appendChild(line);
+          }
+        }
+
+        // 田字格虚线中线
+        if (state.type === 'tian') {
+          for (let c = 0; c < cols; c++) {
+            for (let r = 0; r < rows; r++) {
+              const x = startX + c * cell;
+              const y = startY + r * (cell + gap);
+              const midX = x + cell / 2;
+              const midY = y + cell / 2;
+
+              const h = document.createElementNS(ns, 'line');
+              h.setAttribute('x1', x); h.setAttribute('y1', midY);
+              h.setAttribute('x2', x + cell); h.setAttribute('y2', midY);
+              h.setAttribute('stroke', lineColor);
+              h.setAttribute('stroke-width', '0.25');
+              h.setAttribute('stroke-dasharray', '1.5,1.5');
+              svg.appendChild(h);
+
+              const v = document.createElementNS(ns, 'line');
+              v.setAttribute('x1', midX); v.setAttribute('y1', y);
+              v.setAttribute('x2', midX); v.setAttribute('y2', y + cell);
+              v.setAttribute('stroke', lineColor);
+              v.setAttribute('stroke-width', '0.25');
+              v.setAttribute('stroke-dasharray', '1.5,1.5');
+              svg.appendChild(v);
+            }
+          }
+        }
+
+        return svg;
+      }
+
+      function usedW(lay) { return lay.cols * lay.cell; }
+      function usedH(lay) { return lay.rows * lay.cell + (lay.rows - 1) * lay.gap; }
+
+      function renderPreview() {
+        const lay = computeLayout();
+        const [W, H] = PAPER_SIZE[state.paper];
+        els.previewBox.style.aspectRatio = `${W} / ${H}`;
+        els.previewBox.innerHTML = '';
+        els.previewBox.appendChild(buildSvg(lay, false));
+
+        const total = totalPages();
+        els.previewInfo.innerHTML =
+          `每页 <strong>${lay.cols} × ${lay.rows}</strong> 格 · ` +
+          `共 <strong>${total}</strong> 页` +
+          (state.duplex && state.pages % 2 === 1 ? '（含1张双面占位空白页）' : '');
+      }
+
+      function totalPages() {
+        let n = parseInt(state.pages, 10) || 1;
+        if (state.duplex && n % 2 === 1) n += 1;
+        return n;
+      }
+
+      function updatePageStyle() {
+        const [W, H] = PAPER_SIZE[state.paper];
+        els.pageStyle.textContent =
+          `@page { size: ${W}mm ${H}mm; margin: 0; }\n` +
+          `#printArea .sheet { --sheet-w: ${W}mm; --sheet-h: ${H}mm; }`;
+      }
+
+      function buildPrintArea() {
+        const lay = computeLayout();
+        const total = totalPages();
+        const contentCount = parseInt(state.pages, 10) || 1;
+        const frag = document.createDocumentFragment();
+        for (let i = 0; i < total; i++) {
+          const sheet = document.createElement('div');
+          sheet.className = 'sheet';
+          const svg = buildSvg(lay, i >= contentCount);
+          sheet.appendChild(svg);
+          frag.appendChild(sheet);
+        }
+        els.printArea.innerHTML = '';
+        els.printArea.appendChild(frag);
+      }
+
+      function updateUI() {
+        setSegment(els.typeSeg, state.type);
+        setSegment(els.paperSeg, state.paper);
+        setSegment(els.pagesSeg, state.pages);
+        els.cellInput.value = currentCell();
+        els.gapInput.value = currentGap();
+        els.duplexInput.checked = state.duplex;
+        els.looseInput.checked = state.looseLeaf;
+        if (els.looseLabel) {
+          const holes = HOLE_COUNT[state.paper] || 26;
+          els.looseLabel.innerHTML = `活页本（${holes}孔） <span class="hint">左边距固定 25mm</span>`;
+        }
+        els.marginTop.value = state.margins.top;
+        els.marginBottom.value = state.margins.bottom;
+        els.marginLeft.value = state.margins.left;
+        els.marginRight.value = state.margins.right;
+        els.marginLeft.disabled = state.looseLeaf;
+        els.marginLeft.closest('.stepper').classList.toggle('disabled', state.looseLeaf);
+        renderPreview();
+        updatePageStyle();
+        saveState();
+      }
+
+      function reset() {
+        state = deepClone(DEFAULTS);
+        savedLeft = null;
+        updateUI();
+      }
+
+      function confirmPrintGuide() {
+        return confirm(
+          '打印前请检查：\n' +
+          '1. 纸张大小选：' + state.paper + '\n' +
+          '2. 双面打印选“长边翻页”\n' +
+          '3. 页边距设为“无”，缩放 100%\n' +
+          '4. 关闭页眉页脚\n\n' +
+          '准备好了吗？'
+        );
+      }
+
+      function doPrint() {
+        if (!confirmPrintGuide()) return;
+        buildPrintArea();
+        window.print();
+      }
+
+      function loadJsPDF() {
+        return new Promise((resolve, reject) => {
+          if (window.jspdf && window.jspdf.jsPDF) return resolve(window.jspdf.jsPDF);
+          const script = document.createElement('script');
+          script.src = 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js';
+          script.async = true;
+          script.onload = () => {
+            if (window.jspdf && window.jspdf.jsPDF) resolve(window.jspdf.jsPDF);
+            else reject(new Error('jsPDF 加载失败'));
+          };
+          script.onerror = reject;
+          document.head.appendChild(script);
+        });
+      }
+
+      function setStatus(msg) { els.status.textContent = msg; }
+
+      function drawPdfPage(doc, lay, isBlank) {
+        const { W, H, cw, ch, cell, gap, cols, rows, offsetX, offsetY, m } = lay;
+        doc.setLineWidth(0.25);
+        doc.setDrawColor(51, 51, 51);
+        doc.rect(0, 0, W, H); // 纸面外框
+
+        if (isBlank) {
+          doc.setFontSize(10);
+          doc.setTextColor(150, 150, 150);
+          doc.text('空白页 · 双面占位', W / 2, H / 2, { align: 'center', baseline: 'middle' });
+          return;
+        }
+
+        const lineColor = state.type === 'fang' ? [211, 84, 0] : [192, 57, 43];
+        doc.setDrawColor(...lineColor);
+        const startX = m.left + offsetX;
+        const startY = m.top + offsetY;
+        const uw = usedW(lay);
+        const uh = usedH(lay);
+
+        // 竖线 + 横线：列方向左右顶格连续，gap 仅为行间垂直空白
+        for (let r = 0; r < rows; r++) {
+          const rowY = startY + r * (cell + gap);
+          for (let c = 0; c <= cols; c++) {
+            const x = startX + c * cell;
+            doc.line(x, rowY, x, rowY + cell);
+          }
+          doc.line(startX, rowY, startX + uw, rowY);
+          doc.line(startX, rowY + cell, startX + uw, rowY + cell);
+        }
+
+        // 田字格虚线中线
+        if (state.type === 'tian') {
+          doc.setLineDashPattern([1.5, 1.5], 0);
+          for (let c = 0; c < cols; c++) {
+            for (let r = 0; r < rows; r++) {
+              const x = startX + c * cell;
+              const y = startY + r * (cell + gap);
+              doc.line(x, y + cell / 2, x + cell, y + cell / 2);
+              doc.line(x + cell / 2, y, x + cell / 2, y + cell);
+            }
+          }
+          doc.setLineDashPattern([], 0);
+        }
+      }
+
+      async function doExportPDF() {
+        setStatus('正在准备 PDF…');
+        try {
+          const jsPDFClass = await loadJsPDF();
+          const lay = computeLayout();
+          const [W, H] = PAPER_SIZE[state.paper];
+          const total = totalPages();
+          const contentCount = parseInt(state.pages, 10) || 1;
+
+          const doc = new jsPDFClass({ unit: 'mm', format: [W, H], orientation: 'portrait' });
+          if (doc.viewerPreferences) {
+            doc.viewerPreferences({ Duplex: 'DuplexFlipLongEdge', PrintScaling: 'None' });
+          }
+
+          for (let i = 0; i < total; i++) {
+            if (i > 0) doc.addPage([W, H], 'portrait');
+            drawPdfPage(doc, lay, i >= contentCount);
+          }
+
+          const filename = `语文作业纸_${state.paper}_${contentCount}页_${TYPE_NAMES[state.type]}.pdf`;
+          doc.save(filename);
+          setStatus('PDF 已生成');
+        } catch (err) {
+          console.error(err);
+          setStatus('PDF 导出失败，请用系统打印另存为 PDF');
+          alert('PDF 库加载失败，改用“打印”功能，选择“另存为 PDF”即可。');
+        }
+      }
+
+      function init() {
+        bindSegment(els.typeSeg, 'type', () => {
+          // 切换类型时保留各自的 cell/gap
+        });
+
+        bindSegment(els.paperSeg, 'paper', () => {
+          applyPaperDefaults();
+        });
+
+        bindSegment(els.pagesSeg, 'pages');
+
+        bindStepper(els.cellInput, currentCell, v => setCurrentCell(v), 1, 50);
+        bindStepper(els.gapInput, currentGap, v => setCurrentGap(v), 0, 30);
+
+        els.duplexInput.addEventListener('change', () => {
+          state.duplex = els.duplexInput.checked;
+          updateUI();
+        });
+
+        els.looseInput.addEventListener('change', () => {
+          state.looseLeaf = els.looseInput.checked;
+          if (state.looseLeaf) {
+            savedLeft = state.margins.left;
+            state.margins.left = 25;
+          } else {
+            state.margins.left = savedLeft !== null ? savedLeft : paperDefaults(state.paper).left;
+            if (!state.marginsCustomized) {
+              state.margins = { ...paperDefaults(state.paper) };
+            }
+            savedLeft = null;
+          }
+          updateUI();
+        });
+
+        bindMargin(els.marginTop, 'top');
+        bindMargin(els.marginBottom, 'bottom');
+        bindMargin(els.marginLeft, 'left');
+        bindMargin(els.marginRight, 'right');
+
+        els.resetBtn.addEventListener('click', reset);
+        els.printBtn.addEventListener('click', doPrint);
+        els.pdfBtn.addEventListener('click', doExportPDF);
+
+        updateUI();
+      }
+
+      init();
+    })();
+  </script>
+</body>
+</html>
