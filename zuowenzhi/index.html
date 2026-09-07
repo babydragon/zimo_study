@@ -409,6 +409,13 @@
         </div>
       </div>
       <div class="row">
+        <span class="label">方向</span>
+        <div class="segment" id="orientSeg">
+          <button data-value="portrait" class="active">竖版</button>
+          <button data-value="landscape">横版</button>
+        </div>
+      </div>
+      <div class="row">
         <span class="label">页数</span>
         <div class="segment" id="pagesSeg">
           <button data-value="1">1</button>
@@ -529,6 +536,7 @@
 
       const DEFAULTS = {
         paper: 'B5',
+        orient: 'portrait',
         type: 'fang',
         cellFang: 8,
         cellTian: 12,
@@ -544,11 +552,12 @@
       const LS_KEY = 'zuowenzhi_settings_v1';
 
       let state = loadState();
-      let savedLeft = null; // 活页关闭时还原左边距用
+      let savedLeft = null; // 活页关闭时还原左边距用（竖版横版装订边统一为左边）
 
       const els = {
         typeSeg: document.getElementById('typeSeg'),
         paperSeg: document.getElementById('paperSeg'),
+        orientSeg: document.getElementById('orientSeg'),
         pagesSeg: document.getElementById('pagesSeg'),
         cellInput: document.getElementById('cellInput'),
         gapInput: document.getElementById('gapInput'),
@@ -577,6 +586,10 @@
           const merged = deepClone(DEFAULTS);
           Object.assign(merged, parsed);
           if (parsed.margins) Object.assign(merged.margins, parsed.margins);
+          // 兼容老数据：无 orient 字段时保持竖版
+          if (merged.orient !== 'landscape' && merged.orient !== 'portrait') {
+            merged.orient = 'portrait';
+          }
           return merged;
         } catch (e) {
           return deepClone(DEFAULTS);
@@ -613,12 +626,25 @@
         return PAPER_DEFAULT_MARGINS[paper];
       }
 
+      function isLandscape() { return state.orient === 'landscape'; }
+
+      function orientName() { return isLandscape() ? '横版' : '竖版'; }
+
+      // 纸张有效尺寸：横版时 W,H 对调，其余逻辑统一走这里
+      function effPaperSize() {
+        const [w, h] = PAPER_SIZE[state.paper];
+        return isLandscape() ? [h, w] : [w, h];
+      }
+
+      // 活页装订边：竖版横版统一为左边（短边装订）
+      function bindingKey() { return 'left'; }
+
       function applyPaperDefaults() {
         if (!state.marginsCustomized) {
           state.margins = { ...paperDefaults(state.paper) };
         }
         if (state.looseLeaf) {
-          state.margins.left = 25;
+          state.margins[bindingKey()] = 25;
         }
       }
 
@@ -667,7 +693,7 @@
           state.margins[key] = v;
           state.marginsCustomized = true;
           // 活页开启时，用户改动左边距视为基础值
-          if (key === 'left' && state.looseLeaf) {
+          if (state.looseLeaf && key === 'left') {
             savedLeft = v;
           }
         }
@@ -675,7 +701,8 @@
       }
 
       function computeLayout() {
-        const [W, H] = PAPER_SIZE[state.paper];
+        let [W, H] = PAPER_SIZE[state.paper];
+        if (isLandscape()) { const t = W; W = H; H = t; }
         const m = state.margins;
         const cw = Math.max(1, W - m.left - m.right);
         const ch = Math.max(1, H - m.top - m.bottom);
@@ -700,15 +727,6 @@
         svg.setAttribute('width', '100%');
         svg.setAttribute('height', '100%');
 
-        // 纸面
-        const page = document.createElementNS(ns, 'rect');
-        page.setAttribute('x', 0); page.setAttribute('y', 0);
-        page.setAttribute('width', W); page.setAttribute('height', H);
-        page.setAttribute('fill', '#fffdf5');
-        page.setAttribute('stroke', '#333');
-        page.setAttribute('stroke-width', '0.5');
-        svg.appendChild(page);
-
         if (isBlank) {
           const txt = document.createElementNS(ns, 'text');
           txt.setAttribute('x', W / 2);
@@ -721,15 +739,6 @@
           svg.appendChild(txt);
           return svg;
         }
-
-        // 内容区外框（淡灰，辅助对齐）
-        const area = document.createElementNS(ns, 'rect');
-        area.setAttribute('x', m.left); area.setAttribute('y', m.top);
-        area.setAttribute('width', cw); area.setAttribute('height', ch);
-        area.setAttribute('fill', 'none');
-        area.setAttribute('stroke', '#ddd');
-        area.setAttribute('stroke-width', '0.25');
-        svg.appendChild(area);
 
         const startX = m.left + offsetX;
         const startY = m.top + offsetY;
@@ -795,7 +804,7 @@
 
       function renderPreview() {
         const lay = computeLayout();
-        const [W, H] = PAPER_SIZE[state.paper];
+        const [W, H] = effPaperSize();
         els.previewBox.style.aspectRatio = `${W} / ${H}`;
         els.previewBox.innerHTML = '';
         els.previewBox.appendChild(buildSvg(lay, false));
@@ -814,7 +823,7 @@
       }
 
       function updatePageStyle() {
-        const [W, H] = PAPER_SIZE[state.paper];
+        const [W, H] = effPaperSize();
         els.pageStyle.textContent =
           `@page { size: ${W}mm ${H}mm; margin: 0; }\n` +
           `#printArea .sheet { --sheet-w: ${W}mm; --sheet-h: ${H}mm; }`;
@@ -839,6 +848,7 @@
       function updateUI() {
         setSegment(els.typeSeg, state.type);
         setSegment(els.paperSeg, state.paper);
+        setSegment(els.orientSeg, state.orient);
         setSegment(els.pagesSeg, state.pages);
         els.cellInput.value = currentCell();
         els.gapInput.value = currentGap();
@@ -852,8 +862,11 @@
         els.marginBottom.value = state.margins.bottom;
         els.marginLeft.value = state.margins.left;
         els.marginRight.value = state.margins.right;
+        // 装订边输入禁用：竖版横版统一禁左边
         els.marginLeft.disabled = state.looseLeaf;
-        els.marginLeft.closest('.stepper').classList.toggle('disabled', state.looseLeaf);
+        els.marginLeft.closest('.stepper').classList.toggle('disabled', els.marginLeft.disabled);
+        els.marginTop.disabled = false;
+        els.marginTop.closest('.stepper').classList.toggle('disabled', false);
         renderPreview();
         updatePageStyle();
         saveState();
@@ -868,7 +881,7 @@
       function confirmPrintGuide() {
         return confirm(
           '打印前请检查：\n' +
-          '1. 纸张大小选：' + state.paper + '\n' +
+          '1. 纸张大小选：' + state.paper + '·' + orientName() + '\n' +
           '2. 双面打印选“长边翻页”\n' +
           '3. 页边距设为“无”，缩放 100%\n' +
           '4. 关闭页眉页脚\n\n' +
@@ -903,7 +916,6 @@
         const { W, H, cw, ch, cell, gap, cols, rows, offsetX, offsetY, m } = lay;
         doc.setLineWidth(0.25);
         doc.setDrawColor(51, 51, 51);
-        doc.rect(0, 0, W, H); // 纸面外框
 
         if (isBlank) {
           doc.setFontSize(10);
@@ -950,21 +962,22 @@
         try {
           const jsPDFClass = await loadJsPDF();
           const lay = computeLayout();
-          const [W, H] = PAPER_SIZE[state.paper];
+          const [W, H] = effPaperSize();
+          const orientation = W > H ? 'landscape' : 'portrait';
           const total = totalPages();
           const contentCount = parseInt(state.pages, 10) || 1;
 
-          const doc = new jsPDFClass({ unit: 'mm', format: [W, H], orientation: 'portrait' });
+          const doc = new jsPDFClass({ unit: 'mm', format: [W, H], orientation });
           if (doc.viewerPreferences) {
             doc.viewerPreferences({ Duplex: 'DuplexFlipLongEdge', PrintScaling: 'None' });
           }
 
           for (let i = 0; i < total; i++) {
-            if (i > 0) doc.addPage([W, H], 'portrait');
+            if (i > 0) doc.addPage([W, H], orientation);
             drawPdfPage(doc, lay, i >= contentCount);
           }
 
-          const filename = `语文作业纸_${state.paper}_${contentCount}页_${TYPE_NAMES[state.type]}.pdf`;
+          const filename = `语文作业纸_${state.paper}_${orientName()}_${contentCount}页_${TYPE_NAMES[state.type]}.pdf`;
           doc.save(filename);
           setStatus('PDF 已生成');
         } catch (err) {
@@ -984,6 +997,16 @@
         });
 
         bindSegment(els.pagesSeg, 'pages');
+
+        // 方向切换：装订边统一为左边，无需搬家
+        els.orientSeg.addEventListener('click', e => {
+          const btn = e.target.closest('button');
+          if (!btn) return;
+          const next = btn.dataset.value;
+          if (next === state.orient) { updateUI(); return; }
+          state.orient = next;
+          updateUI();
+        });
 
         bindStepper(els.cellInput, currentCell, v => setCurrentCell(v), 1, 50);
         bindStepper(els.gapInput, currentGap, v => setCurrentGap(v), 0, 30);
