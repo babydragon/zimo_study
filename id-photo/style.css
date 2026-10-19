@@ -1,0 +1,476 @@
+/* 证件照像素调整 · 移动端优先、零依赖 */
+*, *::before, *::after { box-sizing: border-box; }
+
+/* hidden 属性优先于类里的 display（如 .bg-row / .field 的 flex） */
+[hidden] { display: none !important; }
+
+:root {
+  --ink: #2d3436;
+  --muted: #7a8794;
+  --line: #e3ebf3;
+  --card: #ffffff;
+  --primary: #438edb;
+  --primary-d: #2f74bb;
+  --bg: #eef4fb;
+  --radius: 16px;
+  --shadow: 0 8px 22px rgba(52, 106, 168, 0.12);
+  /* 参考线双色：浅底看深色层，深底看浅色层 */
+  --guide-dark: rgba(17, 25, 38, 0.78);
+  --guide-lite: rgba(255, 255, 255, 0.98);
+}
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", -apple-system, "Helvetica Neue", sans-serif;
+  color: var(--ink);
+  background: linear-gradient(180deg, #f3f8ff 0%, #e9f1fb 100%);
+  min-height: 100vh;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.app {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 14px 12px calc(24px + env(safe-area-inset-bottom, 0px));
+}
+
+/* ---------- 顶部 ---------- */
+.topbar { text-align: center; margin-bottom: 10px; }
+.topbar h1 { margin: 0; font-size: clamp(19px, 5.4vw, 23px); font-weight: 800; letter-spacing: 1px; }
+.privacy {
+  margin: 7px auto 0;
+  display: inline-block;
+  font-size: 0.8rem;
+  color: #2f74bb;
+  background: #e2eefb;
+  border-radius: 999px;
+  padding: 5px 13px;
+}
+
+/* ---------- 步骤条 ---------- */
+.steps { display: flex; gap: 8px; margin: 12px 0; }
+.step {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 48px;
+  padding: 8px 6px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--muted);
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.step .idx {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: var(--line);
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+.step.active { color: #fff; background: var(--primary); border-color: var(--primary); }
+.step.active .idx { background: rgba(255, 255, 255, 0.3); color: #fff; }
+.step.done { color: var(--primary-d); border-color: #bcd8f5; }
+.step.done .idx { background: var(--primary); color: #fff; }
+.step:disabled { opacity: 0.55; cursor: default; }
+
+/* ---------- 面板 ---------- */
+.panel[hidden] { display: none; }
+
+/* ---------- 大按钮 ---------- */
+.big-btn {
+  display: block;
+  width: 100%;
+  min-height: 56px;
+  padding: 14px 18px;
+  margin-bottom: 12px;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(180deg, #5aa2e8, var(--primary));
+  box-shadow: 0 4px 0 var(--primary-d), var(--shadow);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.big-btn.ghost {
+  color: var(--primary-d);
+  background: #fff;
+  border: 2px solid #bcd8f5;
+  box-shadow: var(--shadow);
+}
+.big-btn:active { transform: translateY(2px); }
+.pick { padding: 6px 0; }
+.hint { color: var(--muted); font-size: 0.9rem; text-align: center; line-height: 1.6; }
+.error { color: #c0392b; font-size: 0.92rem; margin: 8px 0 0; line-height: 1.5; }
+
+/* ---------- 目标尺寸（步骤 2 顶部：紧凑一行） ---------- */
+.size-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.size-bar-label {
+  flex: none;
+  color: #4d6a8a;
+  font-size: 0.92rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.size-bar select {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 52px;
+  padding: 10px 12px;
+  font-size: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--ink);
+}
+/* 自定义输入挤进同一行，与下拉框共享宽度 */
+.size-bar .custom-size { flex: 2 1 0; min-width: 0; margin-bottom: 0; }
+.size-bar .custom-size input { min-height: 52px; padding: 10px 6px; }
+/* 自定义模式下标签让位，保证 375px 一行不换行、不溢出 */
+.size-bar:has(#customSize:not([hidden])) .size-bar-label { display: none; }
+
+/* 换尺寸后的轻提示（低调、不遮挡取景框） */
+.resize-notice {
+  margin: 0 0 10px;
+  padding: 7px 11px;
+  border-radius: 10px;
+  background: rgba(67, 142, 219, 0.1);
+  color: #4d6a8a;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+.resize-notice[hidden] { display: none; }
+
+/* ---------- 模式分段控件 ---------- */
+.seg { display: flex; gap: 6px; background: #dfeaf7; border-radius: 14px; padding: 4px; }
+.seg-btn {
+  flex: 1;
+  min-height: 44px;
+  border: none;
+  border-radius: 11px;
+  background: transparent;
+  color: #4d6a8a;
+  font-size: 0.98rem;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.seg-btn.active { background: #fff; color: var(--primary-d); box-shadow: 0 2px 6px rgba(52, 106, 168, 0.18); }
+.mode-tip { margin: 8px 2px 10px; color: var(--muted); font-size: 0.88rem; line-height: 1.5; }
+
+/* ---------- 底色选择 ---------- */
+.bg-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.bg-label { color: var(--muted); font-size: 0.9rem; }
+.swatch {
+  width: 44px; height: 44px;
+  border-radius: 12px;
+  border: 2px solid var(--line);
+  cursor: pointer;
+  padding: 0;
+}
+.swatch.white { background: #ffffff; }
+.swatch.blue { background: #438edb; }
+.swatch.red { background: #d9001b; }
+.swatch.active { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(67, 142, 219, 0.25); }
+
+/* ---------- 取景框 ---------- */
+.stage { position: relative; display: flex; flex-direction: column; align-items: center; }
+.viewfinder {
+  position: relative;
+  width: 100%;
+  background: #f0f4f8;
+  border-radius: 12px;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  box-shadow: inset 0 0 0 1px rgba(45, 52, 54, 0.15);
+  cursor: grab;
+}
+.viewfinder:active { cursor: grabbing; }
+.viewfinder canvas { display: block; width: 100%; height: 100%; pointer-events: none; }
+
+.guides { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.guides[hidden] { display: none; }
+.guides .line { position: absolute; }
+
+/* 参考线：2px 双层虚线（上层深色、下层浅色）。
+   白底看得到深色层，黑底/深色头发看得到浅色层，中间色调两层都在，任何底图上都清晰。 */
+.hline,
+.vline {
+  background-repeat: repeat-x, repeat-x;
+  background-size: 100% 1px, 100% 1px;
+  background-position: 0 0, 0 1px;
+  background-image:
+    repeating-linear-gradient(90deg, var(--guide-dark) 0 7px, rgba(0, 0, 0, 0) 7px 11px),
+    repeating-linear-gradient(90deg, var(--guide-lite) 0 7px, rgba(255, 255, 255, 0) 7px 11px);
+}
+.vline {
+  background-repeat: repeat-y, repeat-y;
+  background-size: 1px 100%, 1px 100%;
+  background-position: 0 0, 1px 0;
+  background-image:
+    repeating-linear-gradient(180deg, var(--guide-dark) 0 7px, rgba(0, 0, 0, 0) 7px 11px),
+    repeating-linear-gradient(180deg, var(--guide-lite) 0 7px, rgba(255, 255, 255, 0) 7px 11px);
+}
+.hline { left: 0; right: 0; height: 2px; }
+.vline { top: 0; bottom: 0; width: 2px; }
+.g-top { top: 8%; }
+.g-eye { top: 45%; }
+.g-chin { top: 78%; }
+.g-center { left: 50%; }
+
+/* 框内小标签：靠左放置，避免压住参考线中段和人像 */
+.guide-text,
+.vf-hint {
+  position: absolute;
+  left: 8px;
+  display: block;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  line-height: 1.45;
+  white-space: nowrap;
+  color: #fff;
+  background: rgba(21, 30, 44, 0.58);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
+}
+.guide-text { top: 6px; }
+/* 手势提示紧跟在「对齐」标签下方：取景框顶部是留白区，不会被底部浮动条压住 */
+.vf-hint {
+  top: 32px;
+  pointer-events: none;
+  color: #3d5871;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+}
+/* 参考线关掉后，「单指拖动」提示补到框顶，不留空洞 */
+.viewfinder:has(#guides[hidden]) .vf-hint { top: 6px; }
+
+/* ---------- 参考线图例 + 开关（一行放在取景框下方） ---------- */
+.guide-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px 8px;
+  width: 100%;
+  margin-top: 10px;
+}
+.legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 34px;
+  padding: 0 8px;
+  border-radius: 9px;
+  background: rgba(67, 142, 219, 0.08);
+  color: #4d6a8a;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.legend i {
+  width: 14px;
+  height: 2px;
+  border-radius: 1px;
+  background-repeat: repeat-x, repeat-x;
+  background-size: 100% 1px, 100% 1px;
+  background-position: 0 0, 0 1px;
+  background-image:
+    repeating-linear-gradient(90deg, var(--guide-dark) 0 4px, rgba(0, 0, 0, 0) 4px 7px),
+    repeating-linear-gradient(90deg, var(--guide-lite) 0 4px, rgba(255, 255, 255, 0) 4px 7px);
+}
+.stage:has(#guides[hidden]) .legend { opacity: 0.42; }
+
+.guides-toggle {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--primary-d);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.guides-toggle:active { background: #eef4fb; }
+
+/* ---------- 快捷操作 ---------- */
+.actions {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin: 14px 0 10px;
+}
+.act {
+  min-height: 48px;
+  padding: 6px 4px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  color: #3d5871;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.act:active { background: #eef4fb; }
+
+/* ---------- 缩放滑杆 ---------- */
+.zoom-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+.zoom-label { color: var(--muted); font-size: 0.9rem; }
+.zoom-row input[type="range"] { width: 100%; height: 44px; }
+
+/* 滑杆触摸区保持 44px 以上 */
+input[type="range"] { min-height: 44px; touch-action: manipulation; }
+
+/* ---------- 底部导航 ---------- */
+.nav-row { display: flex; gap: 10px; margin-top: 14px; }
+/* 步骤 2：取景框占了一屏，关键动作常驻屏幕底部，家长不用往下找 */
+#panel2 .nav-row {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  margin-top: 16px;
+  padding: 12px 0 calc(6px + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(180deg,
+    rgba(238, 244, 251, 0.88) 0%,
+    rgba(238, 244, 251, 0.97) 42%,
+    rgba(238, 244, 251, 0.99) 100%);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+/* 常驻动作条里，「下一步」比「重选照片」更宽更重 */
+#panel2 .nav-row .btn.primary { flex: 1.4; }
+.btn {
+  flex: 1;
+  min-height: 52px;
+  padding: 12px 12px;
+  border: none;
+  border-radius: 14px;
+  font-size: 1rem;
+  font-weight: 800;
+  cursor: pointer;
+  text-align: center;
+  text-decoration: none;
+  touch-action: manipulation;
+}
+.btn.primary { color: #fff; background: linear-gradient(180deg, #5aa2e8, var(--primary)); box-shadow: 0 4px 0 var(--primary-d); }
+.btn.primary:disabled { opacity: 0.5; box-shadow: none; }
+.btn.ghost { color: var(--primary-d); background: #fff; border: 2px solid #bcd8f5; }
+.btn.big { display: block; width: 100%; margin-top: 4px; }
+.btn:active { transform: translateY(1px); }
+
+/* ---------- 表单 ---------- */
+.field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.field-label { color: #4d6a8a; font-size: 0.92rem; font-weight: 700; }
+.field select {
+  min-height: 52px;
+  padding: 10px 12px;
+  font-size: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--ink);
+}
+.field input[type="range"] { width: 100%; height: 44px; }
+
+.custom-size { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.custom-size[hidden] { display: none; }
+.custom-size input {
+  flex: 1;
+  min-width: 0;
+  min-height: 52px;
+  padding: 10px;
+  font-size: 1rem;
+  text-align: center;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+}
+.custom-size .times { font-weight: 800; color: var(--muted); }
+.custom-size .unit { color: var(--muted); font-size: 0.9rem; }
+
+/* ---------- 步骤 3：尺寸只读摘要 + 「改尺寸」 ---------- */
+.size-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #f7fbff;
+}
+.size-summary-label { color: var(--muted); font-size: 0.9rem; }
+.size-summary-val { color: var(--ink); font-size: 1rem; }
+.size-edit {
+  margin-left: auto;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid #bcd8f5;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--primary-d);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.size-edit:active { background: #eef4fb; }
+
+/* ---------- 结果 ---------- */
+.result { margin-top: 16px; text-align: center; }
+.result[hidden] { display: none; }
+.result img {
+  max-width: 100%;
+  max-height: 40vh;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+.result-info { margin: 12px 0 4px; font-weight: 800; color: #2d3436; }
+.result-ok { margin: 0 0 12px; color: #1e9e5e; font-weight: 700; }
+#downloadBtn { margin-bottom: 4px; }
+
+/* ---------- 生成前的占位说明（生成后自动隐藏） ---------- */
+.result-ph {
+  margin-top: 16px;
+  padding: 18px 16px;
+  border: 2px dashed #c8dcf2;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.6);
+  text-align: center;
+}
+/* 结果区出现后，占位说明自动让位（纯 CSS 联动，不改动脚本） */
+#result:not([hidden]) ~ .result-ph { display: none; }
+
+.result-ph .ph-emoji { display: block; font-size: 1.6rem; line-height: 1; }
+.result-ph .ph-title { margin: 8px 0 4px; font-size: 0.95rem; font-weight: 800; color: #4d6a8a; }
+.result-ph .ph-sub { margin: 0; color: var(--muted); font-size: 0.82rem; line-height: 1.6; }
+
+.footer { margin-top: 20px; text-align: center; color: var(--muted); font-size: 0.82rem; line-height: 1.5; }
+
+/* 手机上用不到「拖进来 / Ctrl+V」这类电脑操作说明 */
+.hint-pc { display: none; }
+
+/* ---------- 宽屏微调 ---------- */
+@media (min-width: 640px) {
+  .app { max-width: 560px; }
+  .actions { grid-template-columns: repeat(4, 1fr); }
+  .hint-pc { display: block; }
+}

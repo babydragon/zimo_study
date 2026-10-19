@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#438edb">
+<title>证件照像素调整</title>
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<main class="app" id="app">
+  <header class="topbar">
+    <h1>🪪 证件照像素调整</h1>
+    <p class="privacy">照片只在这台设备上处理，不会上传。</p>
+  </header>
+
+  <nav class="steps" id="steps">
+    <button class="step active" type="button" data-step="1"><span class="idx">1</span><span class="lbl">选照片</span></button>
+    <button class="step" type="button" data-step="2" disabled><span class="idx">2</span><span class="lbl">调整</span></button>
+    <button class="step" type="button" data-step="3" disabled><span class="idx">3</span><span class="lbl">导出</span></button>
+  </nav>
+
+  <!-- ========== 步骤 1：选照片 ========== -->
+  <section class="panel" id="panel1">
+    <div class="pick" id="pickArea">
+      <button class="big-btn" id="pickLibrary" type="button">📁 从相册选择照片</button>
+      <button class="big-btn ghost" id="pickCamera" type="button">📷 直接拍照</button>
+      <p class="hint">支持 JPG、PNG。苹果手机的 HEIC 照片，请在相册里先导出成 JPG。</p>
+      <p class="hint hint-pc">电脑上也可以直接把照片拖进来，或按 Ctrl+V 粘贴。</p>
+    </div>
+    <input type="file" id="fileInput" accept="image/*" hidden>
+    <input type="file" id="cameraInput" accept="image/*" capture="environment" hidden>
+    <p class="error" id="step1Error" hidden></p>
+  </section>
+
+  <!-- ========== 步骤 2：调整 ========== -->
+  <section class="panel" id="panel2" hidden>
+    <div class="size-bar" id="sizeBar">
+      <span class="size-bar-label">目标尺寸</span>
+      <select id="sizePreset">
+        <option value="300x420" selected>300×420（常用）</option>
+        <option value="295x413">一寸 295×413</option>
+        <option value="413x579">二寸 413×579</option>
+        <option value="413x531">小二寸 413×531</option>
+        <option value="custom">自定义</option>
+      </select>
+      <div class="custom-size" id="customSize" hidden>
+        <input type="number" id="customW" min="50" max="2000" step="1" inputmode="numeric" value="300">
+        <span class="times">×</span>
+        <input type="number" id="customH" min="50" max="2000" step="1" inputmode="numeric" value="420">
+        <span class="unit">像素</span>
+      </div>
+    </div>
+    <p class="error" id="sizeError" hidden></p>
+    <p class="resize-notice" id="resizeNotice" hidden></p>
+
+    <div class="seg" id="modeSeg">
+      <button class="seg-btn active" type="button" data-mode="cover">智能裁剪</button>
+      <button class="seg-btn" type="button" data-mode="contain">完整留白</button>
+      <button class="seg-btn" type="button" data-mode="stretch">拉伸填满</button>
+    </div>
+    <p class="mode-tip" id="modeTip">等比放大铺满画面，多余部分自动裁掉，不会变形。</p>
+
+    <div class="bg-row" id="bgRow" hidden>
+      <span class="bg-label">底色</span>
+      <button class="swatch white active" type="button" data-bg="#FFFFFF" aria-label="白色"></button>
+      <button class="swatch blue" type="button" data-bg="#438EDB" aria-label="浅蓝"></button>
+      <button class="swatch red" type="button" data-bg="#D9001B" aria-label="浅红"></button>
+    </div>
+
+    <div class="stage" id="stage">
+      <div class="viewfinder" id="viewfinder">
+        <canvas id="previewCanvas"></canvas>
+        <div class="guides" id="guides">
+          <span class="line hline g-top"></span>
+          <span class="line hline g-eye"></span>
+          <span class="line hline g-chin"></span>
+          <span class="line vline g-center"></span>
+          <span class="guide-text">人像请对齐参考线</span>
+        </div>
+        <span class="vf-hint">单指拖动 · 双指缩放</span>
+      </div>
+
+      <div class="guide-bar">
+        <span class="legend"><i></i>头顶留白</span>
+        <span class="legend"><i></i>眼睛</span>
+        <span class="legend"><i></i>下巴</span>
+        <button class="guides-toggle" id="guidesToggle" type="button">隐藏参考线</button>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="act" type="button" data-act="centerX">水平居中</button>
+      <button class="act" type="button" data-act="centerY">垂直居中</button>
+      <button class="act" type="button" data-act="fill">填满</button>
+      <button class="act" type="button" data-act="zoomOut">－ 缩小</button>
+      <button class="act" type="button" data-act="zoomIn">＋ 放大</button>
+      <button class="act" type="button" data-act="rotate">↻ 旋转90°</button>
+      <button class="act" type="button" data-act="flip">⇋ 左右镜像</button>
+      <button class="act" type="button" data-act="reset">↺ 重置</button>
+    </div>
+
+    <div class="zoom-row">
+      <span class="zoom-label">缩放 <b id="zoomVal">100%</b></span>
+      <input type="range" id="zoomSlider" min="0.4" max="4" step="0.01" value="1">
+    </div>
+
+    <div class="nav-row">
+      <button class="btn ghost" id="backTo1" type="button">← 重选照片</button>
+      <button class="btn primary" id="toStep3" type="button">下一步：导出 →</button>
+    </div>
+  </section>
+
+  <!-- ========== 步骤 3：导出 ========== -->
+  <section class="panel" id="panel3" hidden>
+    <div class="size-summary">
+      <span class="size-summary-label">目标尺寸</span>
+      <b class="size-summary-val" id="sizeSummary">300×420 px</b>
+      <button class="size-edit" id="editSize" type="button">✎ 改尺寸</button>
+    </div>
+
+    <label class="field">
+      <span class="field-label">格式</span>
+      <select id="formatSelect">
+        <option value="jpeg" selected>JPEG（体积小）</option>
+        <option value="png">PNG（更清晰）</option>
+      </select>
+    </label>
+
+    <div class="field quality-field" id="qualityField">
+      <span class="field-label">画质 <b id="qualityVal">0.92</b></span>
+      <input type="range" id="qualitySlider" min="0.5" max="1" step="0.01" value="0.92">
+    </div>
+
+    <button class="btn primary big" id="exportBtn" type="button">生成照片</button>
+
+    <div class="result" id="result" hidden>
+      <img id="resultImg" alt="生成结果预览">
+      <p class="result-info" id="resultInfo"></p>
+      <p class="result-ok">✅ 老师要求的像素已满足</p>
+      <a class="btn primary big" id="downloadBtn" download>⬇️ 下载照片</a>
+    </div>
+
+    <!-- 生成前的占位说明：点过「生成照片」后由 #result:not([hidden]) 自动隐藏 -->
+    <div class="result-ph">
+      <span class="ph-emoji" aria-hidden="true">🖼️</span>
+      <p class="ph-title">照片会出现在这里</p>
+      <p class="ph-sub">点上面的「生成照片」，就能看到预览、实际像素和「下载照片」按钮。</p>
+    </div>
+
+    <div class="nav-row">
+      <button class="btn ghost" id="backTo2" type="button">← 返回调整</button>
+      <button class="btn ghost" id="restart" type="button">🔁 重来</button>
+    </div>
+  </section>
+
+  <p class="footer">温馨提示：不同学校要求的像素可能不同，请以老师通知为准。</p>
+</main>
+<script src="./app.js"></script>
+</body>
+</html>
